@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-#include "rhs.hpp"
-
+#include <czarny_to_cartesian.hpp>
 #include <math_tools.hpp>
+
+#include "curvilinear_solution.hpp"
+#include "rhs.hpp"
 
 template <>
 KOKKOS_FUNCTION double
