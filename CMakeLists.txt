@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.25)
-project(gysela-mini-app_poisson CXX)
+project(gysela-mini-app_poisson C CXX)
 
 ###############################################################################################
 #                           List of options for Gyselalib++ library
@@ -32,6 +32,6 @@ set(CMAKE_CXX_FLAGS "${GYSELAX_DEFAULT_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 add_subdirectory(src/)
 
 ## Build the simulations (applications mains) in `simulations/`
-#add_subdirectory(simulations/)
+add_subdirectory(simulations/)
 
 
