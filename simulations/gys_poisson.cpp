@@ -20,6 +20,7 @@
 #include "math_tools.hpp"
 #include "paraconfpp.hpp"
 #include "params.yaml.hpp"
+#include "poisson_init.hpp"
 #include "rhs.hpp"
 #include "spline_definitions_r_theta.hpp"
 
@@ -97,6 +98,15 @@ int main(int argc, char** argv) {
     // setup mapping
     AnalyticalMapping mapping;
 
+    SplineRThetaBuilder_host builder(idx_range);
+
+    ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_left(r_min);
+    ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_right(r_max);
+    ddc::PeriodicExtrapolationRule<Theta> theta_extrapolation_rule;
+    SplineRThetaEvaluatorConstBound_host evaluator(
+        boundary_condition_r_left, boundary_condition_r_right,
+        theta_extrapolation_rule, theta_extrapolation_rule);
+
     host_t<DFieldMemRTheta> coeff_alpha_alloc(
         idx_range);  // values of the coefficient alpha
     host_t<DFieldMemRTheta> coeff_beta_alloc(idx_range);
@@ -126,8 +136,8 @@ int main(int argc, char** argv) {
     // -------------------------------------------------------------
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta,
                                             Kokkos::HostSpace>>
-        solver;
-    // TODO: Choose solver
+        solver =
+            initialise_solver(conf_gyselalibxx, mapping, builder, evaluator);
 
     solver->update_coefficients(get_const_field(coeff_alpha),
                                 get_const_field(coeff_beta));

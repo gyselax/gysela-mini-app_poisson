@@ -9,4 +9,6 @@ constexpr char const* const params_yaml = R"PDI_CFG(SplineMesh:
   theta_ncells: 256
   theta_min: 0.0
   theta_max: 6.283185307179586
+Poisson:
+  algorithm: PolarFEM
 )PDI_CFG";

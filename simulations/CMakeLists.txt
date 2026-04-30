@@ -11,6 +11,7 @@ target_link_libraries(gys-poisson
         gslx::pde_solvers
         gslx::poisson_RTheta
         gslx::utils
+        poisson_init
         test_cases
 )
 target_compile_definitions(gys-poisson PUBLIC -DCIRCULAR_MAPPING)
