@@ -51,7 +51,7 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@v23
         with:
           config: './.markdownlint.json'
-          globs: '**/*.md,!.github/**/*.md,!.gitlab/**/*.md'
+          globs: '**/*.md,!.github/**/*.md,!.gitlab/**/*.md,!gyselalibxx/**'
           separator: ','
 
   Python:
