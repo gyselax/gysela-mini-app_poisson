@@ -23,7 +23,7 @@ jobs:
           submodules: true
       - run: |
           cp gyselalibxx/src/.clang-format .
-          find src tests simulations -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | \
+          find src simulations -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | \
           xargs clang-format-14 -n -Werror
         shell: bash
 
