@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: MIT
-#include <paraconf.h>
-#include <pdi.h>
-
 #include <chrono>
-#include <ddc/ddc.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+
+#include <ddc/ddc.hpp>
+
+#include <paraconf.h>
+#include <pdi.h>
 
 #include "cartesian_solution.hpp"
 #include "circular_to_cartesian.hpp"
 #include "curvilinear_solution.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "ddc_alias_inline_functions.hpp"
+#include "discrete_poloidal_cs_spline_mapping.hpp"
+#include "discrete_poloidal_cs_spline_mapping_builder.hpp"
 #include "geometry_r_theta.hpp"
 #include "input.hpp"
 #include "ipolar_poisson_like_solver.hpp"
@@ -38,7 +41,8 @@ using Solution = CurvilinearSolution<AnalyticalMapping>;
 using Solution = CartesianSolution<AnalyticalMapping>;
 #endif
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     ::Kokkos::ScopeGuard kokkos_scope(argc, argv);
     ::ddc::ScopeGuard ddc_scope(argc, argv);
 
@@ -53,8 +57,7 @@ int main(int argc, char** argv) {
             return EXIT_SUCCESS;
         }
     } else {
-        std::cerr << "usage: " << argv[0]
-                  << " [--dump-config] <config_file.yml>" << std::endl;
+        std::cerr << "usage: " << argv[0] << " [--dump-config] <config_file.yml>" << std::endl;
         return EXIT_FAILURE;
     }
     PC_errhandler(PC_NULL_HANDLER);
@@ -62,37 +65,31 @@ int main(int argc, char** argv) {
     // -------------------------------------------------------------
     //                        Setup
     // -------------------------------------------------------------
-    std::chrono::time_point<std::chrono::system_clock> start_time =
-        std::chrono::system_clock::now();
+    std::chrono::time_point<std::chrono::system_clock> start_time
+            = std::chrono::system_clock::now();
     std::chrono::time_point<std::chrono::system_clock> end_time;
 
     CoordR r_min(PCpp_double(conf_gyselalibxx, ".SplineMesh.r_min"));
     CoordR r_max(PCpp_double(conf_gyselalibxx, ".SplineMesh.r_max"));
     IdxStepR r_ncells(PCpp_int(conf_gyselalibxx, ".SplineMesh.r_ncells"));
 
-    CoordTheta theta_min(
-        PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_min"));
-    CoordTheta theta_max(
-        PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_max"));
-    IdxStepTheta theta_ncells(
-        PCpp_int(conf_gyselalibxx, ".SplineMesh.theta_ncells"));
+    CoordTheta theta_min(PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_min"));
+    CoordTheta theta_max(PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_max"));
+    IdxStepTheta theta_ncells(PCpp_int(conf_gyselalibxx, ".SplineMesh.theta_ncells"));
 
-    std::vector<CoordR> breakpoints_r =
-        build_uniform_break_points(r_min, r_max, r_ncells);
-    std::vector<CoordTheta> breakpoints_theta =
-        build_uniform_break_points(theta_min, theta_max, theta_ncells);
+    std::vector<CoordR> breakpoints_r = build_uniform_break_points(r_min, r_max, r_ncells);
+    std::vector<CoordTheta> breakpoints_theta
+            = build_uniform_break_points(theta_min, theta_max, theta_ncells);
 
     ddc::init_discrete_space<BSplinesR>(breakpoints_r);
-    ddc::init_discrete_space<GridR>(
-        SplineInterpPointsR::template get_sampling<GridR>());
+    ddc::init_discrete_space<GridR>(SplineInterpPointsR::template get_sampling<GridR>());
 
     ddc::init_discrete_space<BSplinesTheta>(breakpoints_theta);
     ddc::init_discrete_space<GridTheta>(
-        SplineInterpPointsTheta::template get_sampling<GridTheta>());
+            SplineInterpPointsTheta::template get_sampling<GridTheta>());
 
     IdxRangeR idxrange_r = SplineInterpPointsR::template get_domain<GridR>();
-    IdxRangeTheta idxrange_theta =
-        SplineInterpPointsTheta::template get_domain<GridTheta>();
+    IdxRangeTheta idxrange_theta = SplineInterpPointsTheta::template get_domain<GridTheta>();
     IdxRangeRTheta idx_range(idxrange_r, idxrange_theta);
 
     // setup mapping
@@ -104,49 +101,58 @@ int main(int argc, char** argv) {
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_right(r_max);
     ddc::PeriodicExtrapolationRule<Theta> theta_extrapolation_rule;
     SplineRThetaEvaluatorConstBound_host evaluator(
-        boundary_condition_r_left, boundary_condition_r_right,
-        theta_extrapolation_rule, theta_extrapolation_rule);
+            boundary_condition_r_left,
+            boundary_condition_r_right,
+            theta_extrapolation_rule,
+            theta_extrapolation_rule);
 
-    host_t<DFieldMemRTheta> coeff_alpha_alloc(
-        idx_range);  // values of the coefficient alpha
+    DiscretePoloidalCSSplineMappingBuilder<
+            X,
+            Y,
+            SplineRThetaBuilder_host,
+            SplineRThetaEvaluatorConstBound_host> const
+            discrete_mapping_builder(
+                    Kokkos::DefaultHostExecutionSpace(),
+                    mapping,
+                    builder,
+                    evaluator);
+    DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
+
+    host_t<DFieldMemRTheta> coeff_alpha_alloc(idx_range); // values of the coefficient alpha
     host_t<DFieldMemRTheta> coeff_beta_alloc(idx_range);
 
-    host_t<DFieldRTheta> coeff_alpha =
-        get_field(coeff_alpha_alloc);  // values of the coefficient alpha
+    host_t<DFieldRTheta> coeff_alpha
+            = get_field(coeff_alpha_alloc); // values of the coefficient alpha
     host_t<DFieldRTheta> coeff_beta = get_field(coeff_beta_alloc);
 
     ddc::parallel_for_each(
-        Kokkos::DefaultExecutionSpace(), idx_range,
-        KOKKOS_LAMBDA(IdxRTheta const irtheta) {
-            coeff_alpha(irtheta) = Kokkos::exp(-Kokkos::tanh(
-                (ddc::coordinate(ddc::select<GridR>(irtheta)) - 0.7) / 0.05));
-            coeff_beta(irtheta) = 1.0 / coeff_alpha(irtheta);
-        });
+            Kokkos::DefaultExecutionSpace(),
+            idx_range,
+            KOKKOS_LAMBDA(IdxRTheta const irtheta) {
+                coeff_alpha(irtheta) = Kokkos::exp(
+                        -Kokkos::tanh((ddc::coordinate(ddc::select<GridR>(irtheta)) - 0.7) / 0.05));
+                coeff_beta(irtheta) = 1.0 / coeff_alpha(irtheta);
+            });
 
     end_time = std::chrono::system_clock::now();
     std::cout << "Setup time : "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                     end_time - start_time)
-                     .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time)
+                         .count()
               << "ms" << std::endl;
     start_time = std::chrono::system_clock::now();
 
     // -------------------------------------------------------------
     //                    Initialise Poisson
     // -------------------------------------------------------------
-    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta,
-                                            Kokkos::HostSpace>>
-        solver =
-            initialise_solver(conf_gyselalibxx, mapping, builder, evaluator);
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
+            solver = initialise_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
 
-    solver->update_coefficients(get_const_field(coeff_alpha),
-                                get_const_field(coeff_beta));
+    solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));
 
     end_time = std::chrono::system_clock::now();
     std::cout << "Poisson initialisation time : "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                     end_time - start_time)
-                     .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time)
+                         .count()
               << "ms" << std::endl;
 
     // -------------------------------------------------------------
@@ -175,17 +181,17 @@ int main(int argc, char** argv) {
     (*solver)(result, get_const_field(rhs));
     end_time = std::chrono::system_clock::now();
     std::cout << "Solver time : "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                     end_time - start_time)
-                     .count()
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time)
+                         .count()
               << "ms" << std::endl;
 
     // -------------------------------------------------------------
     //                 Check error
     // -------------------------------------------------------------
     double max_err = error_norm_inf(
-        Kokkos::DefaultHostExecutionSpace(), get_const_field(result),
-        [&](IdxRTheta const irtheta) { return lhs(ddc::coordinate(irtheta)); });
+            Kokkos::DefaultHostExecutionSpace(),
+            get_const_field(result),
+            [&](IdxRTheta const irtheta) { return lhs(ddc::coordinate(irtheta)); });
     std::cout << "Max error : " << max_err << std::endl;
 
     PC_tree_destroy(&conf_gyselalibxx);
