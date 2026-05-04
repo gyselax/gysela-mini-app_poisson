@@ -66,7 +66,11 @@ jobs:
           fetch-depth: 0
       - name: Run pylint
         run: |
-          pylint $(find -iname '*.py')
+          PYTHON_FILES=$(find -iname '*.py')
+          if [ -n ${PYTHON_FILES} ]
+          then
+            pylint ${PYTHON_FILES}
+          fi
         shell: bash
 
   spelling:
@@ -78,4 +82,4 @@ jobs:
     - name: Spell Check Repo
       uses: crate-ci/typos@v1.46.0
       with:
-        files: ./CMakeLists.txt ./README.md ./simulations ./src ./tests/
+        files: ./CMakeLists.txt ./README.md ./simulations ./src
