@@ -98,22 +98,22 @@ int main(int argc, char** argv) {
     // setup mapping
     AnalyticalMapping mapping;
 
-    SplineRThetaBuilder_host builder(idx_range);
+    SplineRThetaBuilder builder(idx_range);
 
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_left(r_min);
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_right(r_max);
     ddc::PeriodicExtrapolationRule<Theta> theta_extrapolation_rule;
-    SplineRThetaEvaluatorConstBound_host evaluator(
+    SplineRThetaEvaluatorConstBound evaluator(
         boundary_condition_r_left, boundary_condition_r_right,
         theta_extrapolation_rule, theta_extrapolation_rule);
 
-    host_t<DFieldMemRTheta> coeff_alpha_alloc(
+    DFieldMemRTheta coeff_alpha_alloc(
         idx_range);  // values of the coefficient alpha
-    host_t<DFieldMemRTheta> coeff_beta_alloc(idx_range);
+    DFieldMemRTheta coeff_beta_alloc(idx_range);
 
-    host_t<DFieldRTheta> coeff_alpha =
+    DFieldRTheta coeff_alpha =
         get_field(coeff_alpha_alloc);  // values of the coefficient alpha
-    host_t<DFieldRTheta> coeff_beta = get_field(coeff_beta_alloc);
+    DFieldRTheta coeff_beta = get_field(coeff_beta_alloc);
 
     ddc::parallel_for_each(
         Kokkos::DefaultExecutionSpace(), idx_range,
@@ -134,8 +134,7 @@ int main(int argc, char** argv) {
     // -------------------------------------------------------------
     //                    Initialise Poisson
     // -------------------------------------------------------------
-    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta,
-                                            Kokkos::HostSpace>>
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
         solver =
             initialise_solver(conf_gyselalibxx, mapping, builder, evaluator);
 
@@ -158,11 +157,11 @@ int main(int argc, char** argv) {
 
     ManufacturedRHS<Solution> rhs_calculator(mapping);
 
-    host_t<DFieldMemRTheta> result_alloc(idx_range);
-    host_t<DFieldRTheta> result = get_field(result_alloc);
+    DFieldMemRTheta result_alloc(idx_range);
+    DFieldRTheta result = get_field(result_alloc);
 
-    host_t<DFieldMemRTheta> rhs_alloc(idx_range);
-    host_t<DFieldRTheta> rhs = get_field(result_alloc);
+    DFieldMemRTheta rhs_alloc(idx_range);
+    DFieldRTheta rhs = get_field(result_alloc);
 
     ddc::host_for_each(idx_range, [&](IdxRTheta idx) {
         rhs(idx) = rhs_calculator(ddc::coordinate(idx));
@@ -184,7 +183,7 @@ int main(int argc, char** argv) {
     //                 Check error
     // -------------------------------------------------------------
     double max_err = error_norm_inf(
-        Kokkos::DefaultHostExecutionSpace(), get_const_field(result),
+        Kokkos::DefaultExecutionSpace(), get_const_field(result),
         [&](IdxRTheta const irtheta) { return lhs(ddc::coordinate(irtheta)); });
     std::cout << "Max error : " << max_err << std::endl;
 
