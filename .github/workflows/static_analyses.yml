@@ -67,9 +67,13 @@ jobs:
       - name: Run pylint
         run: |
           PYTHON_FILES=$(find -iname '*.py')
+          echo "Files : '${PYTHON_FILES}'"
           if [ -z "${PYTHON_FILES}" ]
           then
+            echo "Running pylint"
             pylint ${PYTHON_FILES}
+          else
+            echo "No Python files found"
           fi
         shell: bash
 
