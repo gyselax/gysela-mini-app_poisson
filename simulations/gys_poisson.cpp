@@ -96,7 +96,14 @@ int main(int argc, char** argv) {
     IdxRangeRTheta idx_range(idxrange_r, idxrange_theta);
 
     // setup mapping
-    AnalyticalMapping mapping;
+    double major_radius = 6.1;
+    double vertical_offset = 0.3;
+    Coord<X, Y> origin_point(major_radius, vertical_offset);
+#if defined(CIRCULAR_MAPPING)
+    AnalyticalMapping const mapping(origin_point);
+#elif defined(CZARNY_MAPPING)
+    AnalyticalMapping const mapping(0.3, 1.4, origin_point);
+#endif
 
     SplineRThetaBuilder_host builder(idx_range);
 
@@ -152,8 +159,6 @@ int main(int argc, char** argv) {
     // -------------------------------------------------------------
     //                 Initialise Poisson input
     // -------------------------------------------------------------
-    double major_radius = 6.1;
-    double vertical_offset = 0.3;
     Solution lhs(mapping, major_radius, vertical_offset);
 
     ManufacturedRHS<Solution> rhs_calculator(mapping);
