@@ -67,7 +67,7 @@ jobs:
       - name: Run pylint
         run: |
           PYTHON_FILES=$(find -iname '*.py')
-          if [ -n ${PYTHON_FILES} ]
+          if [ -z "${PYTHON_FILES}" ]
           then
             pylint ${PYTHON_FILES}
           fi
