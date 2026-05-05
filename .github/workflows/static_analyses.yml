@@ -1,0 +1,89 @@
+name: Static Analyses
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+env:
+  CHANGES_REF: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+
+jobs:
+  Indentation:
+    name: Clang Formatting Check
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/gyselax/gyselalibxx_env
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - run: |
+          cp gyselalibxx/src/.clang-format .
+          find src simulations -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | \
+          xargs clang-format-14 -n -Werror
+        shell: bash
+
+  Markdown:
+    name: Markdown format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Get Python dependencies
+        run: |
+          pip install numpy
+          pwd
+          ls -a
+        shell: bash
+      - name: Get config
+        run: |
+          cp gyselalibxx/.markdownlint.json .
+        shell: bash
+      - name: Markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v23
+        with:
+          config: './.markdownlint.json'
+          globs: '**/*.md,!.github/**/*.md,!.gitlab/**/*.md,!gyselalibxx/**'
+          separator: ','
+
+  Python:
+    name: Python Best Practices
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/gyselax/gyselalibxx_env
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Run pylint
+        run: |
+          PYTHON_FILES=$(find -iname '*.py')
+          echo "Files : '${PYTHON_FILES}'"
+          if [ -n "${PYTHON_FILES}" ]
+          then
+            echo "Running pylint"
+            pylint ${PYTHON_FILES}
+          else
+            echo "No Python files found"
+          fi
+        shell: bash
+
+  spelling:
+    name: Spell Check with Typos
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Actions Repository
+      uses: actions/checkout@v6
+    - name: Spell Check Repo
+      uses: crate-ci/typos@v1.46.0
+      with:
+        files: ./CMakeLists.txt ./README.md ./simulations ./src
