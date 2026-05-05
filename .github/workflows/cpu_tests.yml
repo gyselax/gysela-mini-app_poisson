@@ -1,0 +1,67 @@
+name: CPU acceptance tests
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+  push:
+    branches: [devel]
+  workflow_dispatch:
+    inputs:
+      toolchain:
+        description: "Tool chain to use for test"
+        required: true
+        type: choice
+        options:
+          - debug_toolchain
+          - release_toolchain
+          - ci_coverage_toolchain
+      merge_target:
+        description: "The branch to which this branch should be compared to filter out costly tests (default: devel)"
+        required: false
+        default: devel
+        type: string
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow, github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  cpu_tests:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/gyselax/gyselalibxx_env:latest
+    name: CPU Test
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+      - name: Checkout gysela-mini-app_poisson
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Build code
+        run: |
+          cmake -DCMAKE_TOOLCHAIN_FILE=gyselalibxx/toolchains/common_toolchains/release_toolchain.cmake -B build -S .
+          cmake --build build --parallel 4
+        shell: bash
+        env:
+          CMAKE_PREFIX_PATH: "/opt/googletest:/opt/openmp"
+      - name: "Run tests"
+        run: |
+          ctest -j 2 --timeout 5 --output-junit tests.xml --output-on-failure
+        shell: bash
+        working-directory: ./build
+        env:
+          OMP_NUM_THREADS: 4
+          OMP_PLACES: threads
+          OMP_PROC_BIND: spread
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v6
+        if: success() || failure() # always run even if the previous step fails
+        with:
+          report_paths: './build/tests.xml'
+
