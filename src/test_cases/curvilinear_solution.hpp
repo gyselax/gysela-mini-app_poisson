@@ -30,7 +30,7 @@ private:
      * @brief The mapping function which converts the logical (polar)
      * coordinates into the physical (Cartesian) coordinates.
      */
-    CurvilinearToCartesian const& m_coordinate_converter;
+    CurvilinearToCartesian m_coordinate_converter;
 
 public:
     /**

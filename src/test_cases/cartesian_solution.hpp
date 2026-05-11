@@ -42,7 +42,7 @@ private:
      * @brief The mapping function which converts the logical (polar)
      * coordinates into the physical (Cartesian) coordinates.
      */
-    CurvilinearToCartesian const& m_coordinate_converter;
+    CurvilinearToCartesian m_coordinate_converter;
     InverseJacobianMatrix<CurvilinearToCartesian> m_inverse_jacobian;
     double m_x0;
     double m_y0;
