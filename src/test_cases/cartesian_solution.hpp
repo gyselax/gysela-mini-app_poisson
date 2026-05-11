@@ -1,5 +1,6 @@
 #pragma once
 #include <ddc/ddc.hpp>
+
 #include <inverse_jacobian_matrix.hpp>
 #include <math_tools.hpp>
 
@@ -25,13 +26,14 @@
  *  + C  (r(x,y)^2 -1)^6 \cdot 2\pi  \cos(2\pi x) \cos(2\pi y). @f$
  */
 template <class CurvilinearToCartesian>
-class CartesianSolution : public ISolution<CurvilinearToCartesian> {
-   private:
+class CartesianSolution : public ISolution<CurvilinearToCartesian>
+{
+private:
     InverseJacobianMatrix<CurvilinearToCartesian> m_inverse_jacobian;
     double m_x0;
     double m_y0;
 
-   public:
+public:
     /**
      * @brief Instantiate a CartesianSolution.
      *
@@ -40,20 +42,24 @@ class CartesianSolution : public ISolution<CurvilinearToCartesian> {
      *      coordinates into the physical (Cartesian) coordinates.
      */
     explicit CartesianSolution(
-        CurvilinearToCartesian const& coordinate_converter, double x0,
-        double y0)
-        : ISolution<CurvilinearToCartesian>(coordinate_converter),
-          m_inverse_jacobian(coordinate_converter),
-          m_x0(x0),
-          m_y0(y0) {}
+            CurvilinearToCartesian const& coordinate_converter,
+            double x0,
+            double y0)
+        : ISolution<CurvilinearToCartesian>(coordinate_converter)
+        , m_inverse_jacobian(coordinate_converter)
+        , m_x0(x0)
+        , m_y0(y0)
+    {
+    }
 
-    double operator()(Coord<R, Theta> const& coord) const final {
+    double operator()(Coord<R, Theta> const& coord) const final
+    {
         const double s = ddc::get<R>(coord);
-        const Coord<X, Y> cart_coord =
-            ISolution<CurvilinearToCartesian>::m_coordinate_converter(coord);
+        const Coord<X, Y> cart_coord
+                = ISolution<CurvilinearToCartesian>::m_coordinate_converter(coord);
         const double x = ddc::get<X>(cart_coord) - m_x0;
         const double y = ddc::get<Y>(cart_coord) - m_y0;
-        return 1e-4 * ipow(1 + s, 6) * ipow(1 - s, 6) * std::cos(2 * M_PI * x) *
-               std::sin(2 * M_PI * y) / ipow(0.5, 12);
+        return 1e-4 * ipow(1 + s, 6) * ipow(1 - s, 6) * std::cos(2 * M_PI * x)
+               * std::sin(2 * M_PI * y) / ipow(0.5, 12);
     }
 };
