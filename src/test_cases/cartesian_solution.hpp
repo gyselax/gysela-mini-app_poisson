@@ -1,11 +1,11 @@
 #pragma once
 #include <ddc/ddc.hpp>
 
-#include <inverse_jacobian_matrix.hpp>
-#include <math_tools.hpp>
 #include <coord_transformation_tools.hpp>
 #include <ddc_aliases.hpp>
 #include <geometry_r_theta.hpp>
+#include <inverse_jacobian_matrix.hpp>
+#include <math_tools.hpp>
 
 /**
  * @brief Define a Cartesian solution of the Poisson-like equation.
@@ -66,13 +66,12 @@ public:
     {
     }
 
-	KOKKOS_DEFAULTED_FUNCTION CartesianSolution(CartesianSolution const&) = default;
+    KOKKOS_DEFAULTED_FUNCTION CartesianSolution(CartesianSolution const&) = default;
 
     KOKKOS_FUNCTION double operator()(Coord<R, Theta> const& coord) const
     {
         const double s = ddc::get<R>(coord);
-        const Coord<X, Y> cart_coord
-                = m_coordinate_converter(coord);
+        const Coord<X, Y> cart_coord = m_coordinate_converter(coord);
         const double x = ddc::get<X>(cart_coord) - m_x0;
         const double y = ddc::get<Y>(cart_coord) - m_y0;
         return 1e-4 * ipow(1 + s, 6) * ipow(1 - s, 6) * std::cos(2 * M_PI * x)

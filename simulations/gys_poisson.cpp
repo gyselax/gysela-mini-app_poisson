@@ -17,9 +17,9 @@
 #include "discrete_poloidal_cs_spline_mapping.hpp"
 #include "discrete_poloidal_cs_spline_mapping_builder.hpp"
 #include "geometry_r_theta.hpp"
+#include "i_solution.hpp"
 #include "input.hpp"
 #include "ipolar_poisson_like_solver.hpp"
-#include "i_solution.hpp"
 #include "l_norm_tools.hpp"
 #include "math_tools.hpp"
 #include "paraconfpp.hpp"
@@ -121,11 +121,7 @@ int main(int argc, char** argv)
             Y,
             SplineRThetaBuilder,
             SplineRThetaEvaluatorConstBound> const
-            discrete_mapping_builder(
-                    Kokkos::DefaultExecutionSpace(),
-                    mapping,
-                    builder,
-                    evaluator);
+            discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, builder, evaluator);
     DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
 
     DFieldMemRTheta coeff_alpha_alloc(idx_range); // values of the coefficient alpha
@@ -179,9 +175,8 @@ int main(int argc, char** argv)
 
     ddc::parallel_for_each(
             Kokkos::DefaultExecutionSpace(),
-					idx_range, KOKKOS_LAMBDA(IdxRTheta idx) {
-        rhs(idx) = rhs_calculator(ddc::coordinate(idx));
-    });
+            idx_range,
+            KOKKOS_LAMBDA(IdxRTheta idx) { rhs(idx) = rhs_calculator(ddc::coordinate(idx)); });
 
     // -------------------------------------------------------------
     //                 Solve Poisson equation

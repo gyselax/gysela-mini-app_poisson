@@ -14,10 +14,12 @@ namespace concepts {
  * @see PolarSplineFEMPoissonLikeSolver
  * @see VlasovPoissonSolver
  */
-		template <typename T>
-		concept Solution = requires(T const& t, Coord<R, Theta> const& coord) {
-				{t(coord)
-		} -> std::same_as<double>;
-		};
-
+template <typename T>
+concept Solution = requires(T const& t, Coord<R, Theta> const& coord)
+{
+    {
+        t(coord)
+        } -> std::same_as<double>;
 };
+
+}; // namespace concepts

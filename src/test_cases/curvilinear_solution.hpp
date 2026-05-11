@@ -48,7 +48,7 @@ public:
     {
     }
 
-	KOKKOS_DEFAULTED_FUNCTION CurvilinearSolution(CurvilinearSolution const&) = default;
+    KOKKOS_DEFAULTED_FUNCTION CurvilinearSolution(CurvilinearSolution const&) = default;
 
     KOKKOS_FUNCTION double operator()(Coord<R, Theta> const& coord) const
     {

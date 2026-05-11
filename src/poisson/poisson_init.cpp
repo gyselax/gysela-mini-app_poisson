@@ -6,12 +6,8 @@
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
 
-using DiscreteMapping = DiscretePoloidalCSSplineMapping<
-        X,
-        Y,
-        SplineRThetaEvaluatorConstBound,
-        R,
-        Theta>;
+using DiscreteMapping
+        = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
 
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
 initialise_polar_fem_solver(
@@ -67,8 +63,7 @@ initialise_polar_fem_solver(
             input_preconditioner_max_block_size);
 }
 
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
-initialise_solver(
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
         SplineRThetaBuilder const& builder,
