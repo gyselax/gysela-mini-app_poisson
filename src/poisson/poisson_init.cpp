@@ -9,10 +9,9 @@
 using DiscreteMapping = DiscretePoloidalCSSplineMapping<
         X,
         Y,
-        SplineRThetaEvaluatorConstBound_host,
+        SplineRThetaEvaluatorConstBound,
         R,
-        Theta,
-        Kokkos::HostSpace>;
+        Theta>;
 
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
 initialise_polar_fem_solver(
@@ -56,8 +55,8 @@ initialise_polar_fem_solver(
             GridR,
             GridTheta,
             PolarBSplinesRTheta,
-            SplineRThetaBuilder_host,
-            SplineRThetaEvaluatorConstBound_host,
+            SplineRThetaBuilder,
+            SplineRThetaEvaluatorConstBound,
             DiscreteMapping>>(
             discrete_mapping,
             builder,

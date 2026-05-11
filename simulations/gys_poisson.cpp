@@ -19,6 +19,7 @@
 #include "geometry_r_theta.hpp"
 #include "input.hpp"
 #include "ipolar_poisson_like_solver.hpp"
+#include "i_solution.hpp"
 #include "l_norm_tools.hpp"
 #include "math_tools.hpp"
 #include "paraconfpp.hpp"
@@ -40,6 +41,8 @@ using Solution = CurvilinearSolution<AnalyticalMapping>;
 #elif defined(CARTESIAN_SOLUTION)
 using Solution = CartesianSolution<AnalyticalMapping>;
 #endif
+
+static_assert(concepts::Solution<Solution>);
 
 int main(int argc, char** argv)
 {
@@ -107,7 +110,7 @@ int main(int argc, char** argv)
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_left(r_min);
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_right(r_max);
     ddc::PeriodicExtrapolationRule<Theta> theta_extrapolation_rule;
-    SplineRThetaEvaluatorConstBound_host evaluator(
+    SplineRThetaEvaluatorConstBound evaluator(
             boundary_condition_r_left,
             boundary_condition_r_right,
             theta_extrapolation_rule,
@@ -116,10 +119,10 @@ int main(int argc, char** argv)
     DiscretePoloidalCSSplineMappingBuilder<
             X,
             Y,
-            SplineRThetaBuilder_host,
-            SplineRThetaEvaluatorConstBound_host> const
+            SplineRThetaBuilder,
+            SplineRThetaEvaluatorConstBound> const
             discrete_mapping_builder(
-                    Kokkos::DefaultHostExecutionSpace(),
+                    Kokkos::DefaultExecutionSpace(),
                     mapping,
                     builder,
                     evaluator);
