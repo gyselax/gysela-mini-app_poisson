@@ -177,7 +177,9 @@ int main(int argc, char** argv)
     DFieldMemRTheta rhs_alloc(idx_range);
     DFieldRTheta rhs = get_field(result_alloc);
 
-    ddc::host_for_each(idx_range, [&](IdxRTheta idx) {
+    ddc::parallel_for_each(
+            Kokkos::DefaultExecutionSpace(),
+					idx_range, KOKKOS_LAMBDA(IdxRTheta idx) {
         rhs(idx) = rhs_calculator(ddc::coordinate(idx));
     });
 
