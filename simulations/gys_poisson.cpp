@@ -14,6 +14,8 @@
 #include "curvilinear_solution.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "ddc_alias_inline_functions.hpp"
+#include "discrete_poloidal_cs_spline_mapping.hpp"
+#include "discrete_poloidal_cs_spline_mapping_builder.hpp"
 #include "geometry_r_theta.hpp"
 #include "input.hpp"
 #include "ipolar_poisson_like_solver.hpp"
@@ -104,6 +106,18 @@ int main(int argc, char** argv)
             theta_extrapolation_rule,
             theta_extrapolation_rule);
 
+    DiscretePoloidalCSSplineMappingBuilder<
+            X,
+            Y,
+            SplineRThetaBuilder_host,
+            SplineRThetaEvaluatorConstBound_host> const
+            discrete_mapping_builder(
+                    Kokkos::DefaultHostExecutionSpace(),
+                    mapping,
+                    builder,
+                    evaluator);
+    DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
+
     host_t<DFieldMemRTheta> coeff_alpha_alloc(idx_range); // values of the coefficient alpha
     host_t<DFieldMemRTheta> coeff_beta_alloc(idx_range);
 
@@ -131,7 +145,7 @@ int main(int argc, char** argv)
     //                    Initialise Poisson
     // -------------------------------------------------------------
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
-            solver = initialise_solver(conf_gyselalibxx, mapping, builder, evaluator);
+            solver = initialise_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
 
     solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));
 

@@ -2,16 +2,22 @@
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
-#include "discrete_poloidal_cs_spline_mapping_builder.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
 
-template <class MappingType>
+using DiscreteMapping = DiscretePoloidalCSSplineMapping<
+        X,
+        Y,
+        SplineRThetaEvaluatorConstBound_host,
+        R,
+        Theta,
+        Kokkos::HostSpace>;
+
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
 initialise_polar_fem_solver(
         PC_tree_t const& conf_gyselalibxx,
-        MappingType const& mapping,
+        DiscreteMapping const& discrete_mapping,
         SplineRThetaBuilder_host const& builder,
         SplineRThetaEvaluatorConstBound_host const& evaluator)
 {
@@ -43,19 +49,6 @@ initialise_polar_fem_solver(
                     : std::nullopt);
 
     // Initialise Polar splines
-    // TODO: Add constexpr if argument is DiscretePoloidalCSSplineMapping
-    DiscretePoloidalCSSplineMappingBuilder<
-            X,
-            Y,
-            SplineRThetaBuilder_host,
-            SplineRThetaEvaluatorConstBound_host> const
-            discrete_mapping_builder(
-                    Kokkos::DefaultHostExecutionSpace(),
-                    mapping,
-                    builder,
-                    evaluator);
-    DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
-
     ddc::init_discrete_space<PolarBSplinesRTheta>(discrete_mapping);
 
     // Create pointer
@@ -65,8 +58,8 @@ initialise_polar_fem_solver(
             PolarBSplinesRTheta,
             SplineRThetaBuilder_host,
             SplineRThetaEvaluatorConstBound_host,
-            MappingType>>(
-            mapping,
+            DiscreteMapping>>(
+            discrete_mapping,
             builder,
             evaluator,
             input_max_iter,
@@ -75,17 +68,16 @@ initialise_polar_fem_solver(
             input_preconditioner_max_block_size);
 }
 
-template <class MappingType>
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
 initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
-        MappingType const& mapping,
+        DiscreteMapping const& discrete_mapping,
         SplineRThetaBuilder_host const& builder,
         SplineRThetaEvaluatorConstBound_host const& evaluator)
 {
     std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
     if (algorithm == "PolarFEM") {
-        return initialise_polar_fem_solver(conf_gyselalibxx, mapping, builder, evaluator);
+        return initialise_polar_fem_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
     } else if (algorithm == "GMGPolar") {
         throw std::runtime_error("GMGPolar is not yet available");
     } else if (algorithm == "HyTeg") {
@@ -95,28 +87,3 @@ initialise_solver(
                                  "HyTeg]");
     }
 }
-
-template std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
-initialise_solver<CircularToCartesian<R, Theta, X, Y>>(
-        PC_tree_t const& conf_gyselalibxx,
-        CircularToCartesian<R, Theta, X, Y> const& mapping,
-        SplineRThetaBuilder_host const& builder,
-        SplineRThetaEvaluatorConstBound_host const& evaluator);
-
-template std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
-initialise_solver<CzarnyToCartesian<R, Theta, X, Y>>(
-        PC_tree_t const& conf_gyselalibxx,
-        CzarnyToCartesian<R, Theta, X, Y> const& mapping,
-        SplineRThetaBuilder_host const& builder,
-        SplineRThetaEvaluatorConstBound_host const& evaluator);
-
-// template std::unique_ptr<
-//     IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta,
-//     Kokkos::HostSpace>>
-// initialise_solver<DiscretePoloidalCSSplineMapping<
-//     X, Y, SplineRThetaEvaluatorConstBound_host>>(
-//     PC_tree_t const& conf_gyselalibxx,
-//     DiscretePoloidalCSSplineMapping<
-//         X, Y, SplineRThetaEvaluatorConstBound_host> const& mapping,
-//     SplineRThetaBuilder_host const& builder,
-//     SplineRThetaEvaluatorConstBound_host const& evaluator);
