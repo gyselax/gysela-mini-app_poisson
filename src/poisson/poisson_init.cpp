@@ -6,20 +6,15 @@
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
 
-using DiscreteMapping = DiscretePoloidalCSSplineMapping<
-        X,
-        Y,
-        SplineRThetaEvaluatorConstBound_host,
-        R,
-        Theta,
-        Kokkos::HostSpace>;
+using DiscreteMapping
+        = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
 
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
 initialise_polar_fem_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineRThetaBuilder_host const& builder,
-        SplineRThetaEvaluatorConstBound_host const& evaluator)
+        SplineRThetaBuilder const& builder,
+        SplineRThetaEvaluatorConstBound const& evaluator)
 {
     // Parse optional arguments
     long int max_iter;
@@ -56,8 +51,8 @@ initialise_polar_fem_solver(
             GridR,
             GridTheta,
             PolarBSplinesRTheta,
-            SplineRThetaBuilder_host,
-            SplineRThetaEvaluatorConstBound_host,
+            SplineRThetaBuilder,
+            SplineRThetaEvaluatorConstBound,
             DiscreteMapping>>(
             discrete_mapping,
             builder,
@@ -68,12 +63,11 @@ initialise_polar_fem_solver(
             input_preconditioner_max_block_size);
 }
 
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
-initialise_solver(
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineRThetaBuilder_host const& builder,
-        SplineRThetaEvaluatorConstBound_host const& evaluator)
+        SplineRThetaBuilder const& builder,
+        SplineRThetaEvaluatorConstBound const& evaluator)
 {
     std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
     if (algorithm == "PolarFEM") {

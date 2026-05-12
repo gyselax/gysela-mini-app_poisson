@@ -17,6 +17,7 @@
 #include "discrete_poloidal_cs_spline_mapping.hpp"
 #include "discrete_poloidal_cs_spline_mapping_builder.hpp"
 #include "geometry_r_theta.hpp"
+#include "i_solution.hpp"
 #include "input.hpp"
 #include "ipolar_poisson_like_solver.hpp"
 #include "l_norm_tools.hpp"
@@ -40,6 +41,8 @@ using Solution = CurvilinearSolution<AnalyticalMapping>;
 #elif defined(CARTESIAN_SOLUTION)
 using Solution = CartesianSolution<AnalyticalMapping>;
 #endif
+
+static_assert(concepts::Solution<Solution>);
 
 int main(int argc, char** argv)
 {
@@ -102,12 +105,12 @@ int main(int argc, char** argv)
     AnalyticalMapping const mapping(0.3, 1.4, origin_point);
 #endif
 
-    SplineRThetaBuilder_host builder(idx_range);
+    SplineRThetaBuilder builder(idx_range);
 
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_left(r_min);
     ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_right(r_max);
     ddc::PeriodicExtrapolationRule<Theta> theta_extrapolation_rule;
-    SplineRThetaEvaluatorConstBound_host evaluator(
+    SplineRThetaEvaluatorConstBound evaluator(
             boundary_condition_r_left,
             boundary_condition_r_right,
             theta_extrapolation_rule,
@@ -116,21 +119,16 @@ int main(int argc, char** argv)
     DiscretePoloidalCSSplineMappingBuilder<
             X,
             Y,
-            SplineRThetaBuilder_host,
-            SplineRThetaEvaluatorConstBound_host> const
-            discrete_mapping_builder(
-                    Kokkos::DefaultHostExecutionSpace(),
-                    mapping,
-                    builder,
-                    evaluator);
+            SplineRThetaBuilder,
+            SplineRThetaEvaluatorConstBound> const
+            discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, builder, evaluator);
     DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
 
-    host_t<DFieldMemRTheta> coeff_alpha_alloc(idx_range); // values of the coefficient alpha
-    host_t<DFieldMemRTheta> coeff_beta_alloc(idx_range);
+    DFieldMemRTheta coeff_alpha_alloc(idx_range); // values of the coefficient alpha
+    DFieldMemRTheta coeff_beta_alloc(idx_range);
 
-    host_t<DFieldRTheta> coeff_alpha
-            = get_field(coeff_alpha_alloc); // values of the coefficient alpha
-    host_t<DFieldRTheta> coeff_beta = get_field(coeff_beta_alloc);
+    DFieldRTheta coeff_alpha = get_field(coeff_alpha_alloc); // values of the coefficient alpha
+    DFieldRTheta coeff_beta = get_field(coeff_beta_alloc);
 
     ddc::parallel_for_each(
             Kokkos::DefaultExecutionSpace(),
@@ -151,8 +149,8 @@ int main(int argc, char** argv)
     // -------------------------------------------------------------
     //                    Initialise Poisson
     // -------------------------------------------------------------
-    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta, Kokkos::HostSpace>>
-            solver = initialise_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> solver
+            = initialise_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
 
     solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));
 
@@ -169,15 +167,16 @@ int main(int argc, char** argv)
 
     ManufacturedRHS<Solution> rhs_calculator(mapping);
 
-    host_t<DFieldMemRTheta> result_alloc(idx_range);
-    host_t<DFieldRTheta> result = get_field(result_alloc);
+    DFieldMemRTheta result_alloc(idx_range);
+    DFieldRTheta result = get_field(result_alloc);
 
-    host_t<DFieldMemRTheta> rhs_alloc(idx_range);
-    host_t<DFieldRTheta> rhs = get_field(result_alloc);
+    DFieldMemRTheta rhs_alloc(idx_range);
+    DFieldRTheta rhs = get_field(result_alloc);
 
-    ddc::host_for_each(idx_range, [&](IdxRTheta idx) {
-        rhs(idx) = rhs_calculator(ddc::coordinate(idx));
-    });
+    ddc::parallel_for_each(
+            Kokkos::DefaultExecutionSpace(),
+            idx_range,
+            KOKKOS_LAMBDA(IdxRTheta idx) { rhs(idx) = rhs_calculator(ddc::coordinate(idx)); });
 
     // -------------------------------------------------------------
     //                 Solve Poisson equation
@@ -194,9 +193,9 @@ int main(int argc, char** argv)
     //                 Check error
     // -------------------------------------------------------------
     double max_err = error_norm_inf(
-            Kokkos::DefaultHostExecutionSpace(),
+            Kokkos::DefaultExecutionSpace(),
             get_const_field(result),
-            [&](IdxRTheta const irtheta) { return lhs(ddc::coordinate(irtheta)); });
+            KOKKOS_LAMBDA(IdxRTheta const irtheta) { return lhs(ddc::coordinate(irtheta)); });
     std::cout << "Max error : " << max_err << std::endl;
 
     PC_tree_destroy(&conf_gyselalibxx);

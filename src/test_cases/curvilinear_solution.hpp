@@ -1,9 +1,10 @@
 #pragma once
 #include <ddc/ddc.hpp>
 
+#include <coord_transformation_tools.hpp>
+#include <ddc_aliases.hpp>
+#include <geometry_r_theta.hpp>
 #include <math_tools.hpp>
-
-#include "i_solution.hpp"
 
 /**
  * @brief Define a curvilinear solution of the Poisson-like equation.
@@ -14,8 +15,23 @@
  * with @f$C = 2^{12}1e-4 @f$ and @f$ m = 11 @f$.
  */
 template <class CurvilinearToCartesian>
-class CurvilinearSolution : public ISolution<CurvilinearToCartesian>
+class CurvilinearSolution
 {
+public:
+    /**
+     * @brief Type the mapping function which converts the logical (polar)
+     * coordinates into the physical (Cartesian) coordinates.
+     */
+    using coordinate_converter_type = CurvilinearToCartesian;
+    static_assert(is_coord_transform_with_o_point_v<CurvilinearToCartesian>);
+
+private:
+    /**
+     * @brief The mapping function which converts the logical (polar)
+     * coordinates into the physical (Cartesian) coordinates.
+     */
+    CurvilinearToCartesian m_coordinate_converter;
+
 public:
     /**
      * @brief Instantiate a CurvilinearSolution.
@@ -28,11 +44,13 @@ public:
             CurvilinearToCartesian const& coordinate_converter,
             double x0,
             double y0)
-        : ISolution<CurvilinearToCartesian>(coordinate_converter)
+        : m_coordinate_converter(coordinate_converter)
     {
     }
 
-    double operator()(Coord<R, Theta> const& coord) const final
+    KOKKOS_DEFAULTED_FUNCTION CurvilinearSolution(CurvilinearSolution const&) = default;
+
+    KOKKOS_FUNCTION double operator()(Coord<R, Theta> const& coord) const
     {
         const double s = ddc::get<R>(coord);
         const double t = ddc::get<Theta>(coord);
