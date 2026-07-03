@@ -42,7 +42,7 @@ jobs:
       - name: Checkout gysela-mini-app_poisson
         uses: actions/checkout@v6
         with:
-          submodules: true
+          submodules: recursive
       - name: Build code
         run: |
           cmake -DCMAKE_TOOLCHAIN_FILE=gyselalibxx/toolchains/common_toolchains/release_toolchain.cmake -B build -S .
