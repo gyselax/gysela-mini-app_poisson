@@ -2,6 +2,7 @@
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
+#include "gmg_polar_poisson_like_solver.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
@@ -78,7 +79,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     PC_status_t abs_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.abs_tol"), &abs_tol);
     PC_status_t rel_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.rel_tol"), &rel_tol);
 
-    return std::make_unique<GMGSolver<
+    return std::make_unique<GMGPolarPoissonLikeSolver<
             DiscreteMapping,
             GridR,
             GridTheta,
@@ -86,7 +87,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             BSplinesTheta,
             SplineRThetaBuilder,
             SplineRThetaEvaluatorConstBound>>
-            solver(discrete_mapping, builder, evaluator);
+            (discrete_mapping, builder, evaluator, max_iter_status, abs_tol_status, rel_tol_status);
 }
 
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
