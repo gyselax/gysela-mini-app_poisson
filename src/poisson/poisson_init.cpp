@@ -63,6 +63,32 @@ initialise_polar_fem_solver(
             input_preconditioner_max_block_size);
 }
 
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_gmgpolar_solver(
+        PC_tree_t const& conf_gyselalibxx,
+        DiscreteMapping const& discrete_mapping,
+        SplineRThetaBuilder const& builder,
+        SplineRThetaEvaluatorConstBound const& evaluator)
+{
+    // Parse optional arguments
+    long int max_iter;
+    double abs_tol;
+    double rel_tol;
+
+    PC_status_t max_iter_status = PC_int(PC_get(conf_gyselalibxx, ".Poisson.max_iter"), &max_iter);
+    PC_status_t abs_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.abs_tol"), &abs_tol);
+    PC_status_t rel_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.rel_tol"), &rel_tol);
+
+    return std::make_unique<GMGSolver<
+            DiscreteMapping,
+            GridR,
+            GridTheta,
+            BSplinesR,
+            BSplinesTheta,
+            SplineRThetaBuilder,
+            SplineRThetaEvaluatorConstBound>>
+            solver(discrete_mapping, builder, evaluator);
+}
+
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
@@ -73,7 +99,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     if (algorithm == "PolarFEM") {
         return initialise_polar_fem_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
     } else if (algorithm == "GMGPolar") {
-        throw std::runtime_error("GMGPolar is not yet available");
+        return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
     } else if (algorithm == "HyTeg") {
         throw std::runtime_error("HyTeg is not yet available");
     } else {
