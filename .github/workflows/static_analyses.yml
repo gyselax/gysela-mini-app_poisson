@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          submodules: true
+          submodules: recursive
       - run: |
           cp gyselalibxx/src/.clang-format .
           find src simulations -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | \
@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          submodules: true
+          submodules: recursive
       - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
