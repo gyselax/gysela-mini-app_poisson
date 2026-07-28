@@ -86,8 +86,13 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             BSplinesR,
             BSplinesTheta,
             SplineRThetaBuilder,
-            SplineRThetaEvaluatorConstBound>>
-            (discrete_mapping, builder, evaluator, max_iter_status, abs_tol_status, rel_tol_status);
+            SplineRThetaEvaluatorConstBound>>(
+            discrete_mapping,
+            builder,
+            evaluator,
+            max_iter_status,
+            abs_tol_status,
+            rel_tol_status);
 }
 
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
