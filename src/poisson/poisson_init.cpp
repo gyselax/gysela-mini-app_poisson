@@ -35,13 +35,13 @@ initialise_polar_fem_solver(
             PC_get(conf_gyselalibxx, ".Poisson.preconditioner_max_block_size"),
             &preconditioner_max_block_size);
 
-    gmgpolar::ExtrapolationType input_with_extrapolation;
+    ExtrapolationType input_with_extrapolation;
     if (with_extrapolation_status == PC_OK) {
         input_with_extrapolation = with_extrapolation
-                                           ? gmgpolar::ExtrapolationType::IMPLICIT_EXTRAPOLATION
-                                           : gmgpolar::ExtrapolationType::NONE;
+                                           ? ExtrapolationType::IMPLICIT_EXTRAPOLATION
+                                           : ExtrapolationType::NONE;
     } else {
-        input_with_extrapolation = gmgpolar::ExtrapolationType::NONE;
+        input_with_extrapolation = ExtrapolationType::NONE;
     }
     std::optional<int> input_max_iter(
             max_iter_status == PC_OK ? std::optional<int>(max_iter) : std::nullopt);
