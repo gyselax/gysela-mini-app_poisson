@@ -18,11 +18,14 @@ initialise_polar_fem_solver(
         SplineRThetaEvaluatorConstBound const& evaluator)
 {
     // Parse optional arguments
+    bool with_extrapolation;
     long int max_iter;
     double res_tol;
     int batch_solver_logger;
     long int preconditioner_max_block_size;
 
+    PC_status_t with_extrapolation_status
+            = PC_bool(PC_get(conf_gyselalibxx, ".Poisson.with_extrapolation"), &with_extrapolation);
     PC_status_t max_iter_status = PC_int(PC_get(conf_gyselalibxx, ".Poisson.max_iter"), &max_iter);
     PC_status_t res_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.res_tol"), &res_tol);
     PC_status_t batch_solver_logger_status = PC_bool(
@@ -32,6 +35,14 @@ initialise_polar_fem_solver(
             PC_get(conf_gyselalibxx, ".Poisson.preconditioner_max_block_size"),
             &preconditioner_max_block_size);
 
+    GMGPolar::ExtrapolationType input_with_extrapolation;
+    if (with_extrapolation_status == PC_OK) {
+        input_with_extrapolation = with_extrapolation
+                                           ? GMGPolar::ExtrapolationType::IMPLICIT_EXTRAPOLATION
+                                           : GMGPolar::ExtrapolationType::NONE;
+    } else {
+        input_with_extrapolation = GMGPolar::ExtrapolationType::NONE;
+    }
     std::optional<int> input_max_iter(
             max_iter_status == PC_OK ? std::optional<int>(max_iter) : std::nullopt);
     std::optional<double> input_res_tol(
@@ -58,6 +69,7 @@ initialise_polar_fem_solver(
             discrete_mapping,
             builder,
             evaluator,
+            input_with_extrapolation,
             input_max_iter,
             input_res_tol,
             input_batch_solver_logger,
