@@ -107,10 +107,7 @@ int main(int argc, char** argv)
 
     SplineInterpolatorRThetaConst interpolator(idx_range);
 
-    DiscretePoloidalCSSplineMappingBuilder<
-            X,
-            Y,
-            SplineInterpolatorRThetaConst> const
+    DiscretePoloidalCSSplineMappingBuilder<X, Y, SplineInterpolatorRThetaConst> const
             discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, interpolator);
     DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
 
