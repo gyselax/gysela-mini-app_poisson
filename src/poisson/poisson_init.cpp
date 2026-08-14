@@ -17,7 +17,6 @@ initialise_polar_fem_solver(
         SplineInterpolatorRThetaConst const& interpolator)
 {
     // Parse optional arguments
-    int with_extrapolation;
     long int max_iter;
     double res_tol;
     int batch_solver_logger;
@@ -65,10 +64,10 @@ initialise_polar_fem_solver(
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_gmgpolar_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineRThetaBuilder const& builder,
-        SplineRThetaEvaluatorConstBound const& evaluator)
+        SplineInterpolatorRThetaConst const& interpolator)
 {
     // Parse optional arguments
+    int with_extrapolation;
     long int max_iter;
     double abs_tol;
     double rel_tol;
@@ -91,8 +90,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             max_iter_status == PC_OK ? std::optional<int>(max_iter) : std::nullopt);
     std::optional<double> input_abs_tol(
             abs_tol_status == PC_OK ? std::optional<double>(abs_tol) : std::nullopt);
-    std::optional<double> input_res_tol(
-            res_tol_status == PC_OK ? std::optional<double>(res_tol) : std::nullopt);
+    std::optional<double> input_rel_tol(
+            rel_tol_status == PC_OK ? std::optional<double>(rel_tol) : std::nullopt);
 
     return std::make_unique<GMGPolarPoissonLikeSolver<
             DiscreteMapping,
@@ -116,7 +115,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     if (algorithm == "PolarFEM") {
         return initialise_polar_fem_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "GMGPolar") {
-        return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
+        return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "HyTeg") {
         throw std::runtime_error("HyTeg is not yet available");
     } else {
