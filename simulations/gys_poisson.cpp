@@ -114,23 +114,10 @@ int main(int argc, char** argv)
     AnalyticalMapping const mapping(0.3, 1.4, origin_point);
 #endif
 
-    SplineRThetaBuilder builder(idx_range);
+    SplineInterpolatorRThetaConst interpolator(idx_range);
 
-    ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_left(r_min);
-    ddc::ConstantExtrapolationRule<R, Theta> boundary_condition_r_right(r_max);
-    ddc::PeriodicExtrapolationRule<Theta> theta_extrapolation_rule;
-    SplineRThetaEvaluatorConstBound evaluator(
-            boundary_condition_r_left,
-            boundary_condition_r_right,
-            theta_extrapolation_rule,
-            theta_extrapolation_rule);
-
-    DiscretePoloidalCSSplineMappingBuilder<
-            X,
-            Y,
-            SplineRThetaBuilder,
-            SplineRThetaEvaluatorConstBound> const
-            discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, builder, evaluator);
+    DiscretePoloidalCSSplineMappingBuilder<X, Y, SplineInterpolatorRThetaConst> const
+            discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, interpolator);
     DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
 
     DFieldMemRTheta coeff_alpha_alloc(idx_range); // values of the coefficient alpha
@@ -159,7 +146,7 @@ int main(int argc, char** argv)
     //                    Initialise Poisson
     // -------------------------------------------------------------
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> solver
-            = initialise_solver(conf_gyselalibxx, discrete_mapping, builder, evaluator);
+            = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator);
 
     solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));
 
