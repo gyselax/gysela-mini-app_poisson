@@ -1,4 +1,15 @@
 // SPDX-License-Identifier: MIT
+#include "hyteg/gridtransferoperators/P1toP1LinearProlongation.hpp"
+#include "hyteg/gridtransferoperators/P1toP1LinearRestriction.hpp"
+#include "hyteg/gridtransferoperators/P2toP2QuadraticProlongation.hpp"
+#include "hyteg/gridtransferoperators/P2toP2QuadraticRestriction.hpp"
+#include "hyteg/p1functionspace/P1Function.hpp"
+#include "hyteg/p2functionspace/P2Function.hpp"
+#include "hyteg_operators/operators/div_alpha_grad_plus_beta_mass/P1ElementwiseDivAlphaGradPlusBetaMassP1CoeffsParametricP1Map.hpp"
+#include "hyteg_operators/operators/div_alpha_grad_plus_beta_mass/P2ElementwiseDivAlphaGradPlusBetaMassP2CoeffsParametricP2Map.hpp"
+#include "hyteg_operators/operators/mass/P1ElementwiseMassParametricP1Map.hpp"
+#include "hyteg_operators/operators/mass/P2ElementwiseMassParametricP2Map.hpp"
+
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
@@ -6,17 +17,6 @@
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
-
-#include "hyteg/p1functionspace/P1Function.hpp"
-#include "hyteg/p2functionspace/P2Function.hpp"
-#include "hyteg/gridtransferoperators/P1toP1LinearProlongation.hpp"
-#include "hyteg/gridtransferoperators/P1toP1LinearRestriction.hpp"
-#include "hyteg/gridtransferoperators/P2toP2QuadraticProlongation.hpp"
-#include "hyteg/gridtransferoperators/P2toP2QuadraticRestriction.hpp"
-#include "hyteg_operators/operators/div_alpha_grad_plus_beta_mass/P1ElementwiseDivAlphaGradPlusBetaMassP1CoeffsParametricP1Map.hpp"
-#include "hyteg_operators/operators/div_alpha_grad_plus_beta_mass/P2ElementwiseDivAlphaGradPlusBetaMassP2CoeffsParametricP2Map.hpp"
-#include "hyteg_operators/operators/mass/P1ElementwiseMassParametricP1Map.hpp"
-#include "hyteg_operators/operators/mass/P2ElementwiseMassParametricP2Map.hpp"
 
 using DiscreteMapping
         = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
@@ -138,7 +138,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     if (polynomial_degree == "P1") {
         return initialise_hyteg_solver_impl<
                 hyteg::P1Function<real_t>,
-                hyteg::operatorgeneration::P1ElementwiseDivAlphaGradPlusBetaMassP1CoeffsParametricP1Map,
+                hyteg::operatorgeneration::
+                        P1ElementwiseDivAlphaGradPlusBetaMassP1CoeffsParametricP1Map,
                 hyteg::operatorgeneration::P1ElementwiseMassParametricP1Map,
                 hyteg::P1toP1LinearRestriction<real_t>,
                 hyteg::P1toP1LinearProlongation<real_t>,
@@ -146,7 +147,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     } else if (polynomial_degree == "P2") {
         return initialise_hyteg_solver_impl<
                 hyteg::P2Function<real_t>,
-                hyteg::operatorgeneration::P2ElementwiseDivAlphaGradPlusBetaMassP2CoeffsParametricP2Map,
+                hyteg::operatorgeneration::
+                        P2ElementwiseDivAlphaGradPlusBetaMassP2CoeffsParametricP2Map,
                 hyteg::operatorgeneration::P2ElementwiseMassParametricP2Map,
                 hyteg::P2toP2QuadraticRestriction,
                 hyteg::P2toP2QuadraticProlongation,

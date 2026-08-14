@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "core/math/Random.h"
-
 #include "hyteg/boundary/BoundaryConditions.hpp"
 #include "hyteg/mesh/MeshInfo.hpp"
 #include "hyteg/mesh/micro/MicroMesh.hpp"
@@ -149,7 +148,8 @@ public:
 
         auto const [coarseRadii, coarseThetas]
                 = hyteg::MeshInfo::annulusBaseBreakpoints(rFine, thetaFine, numLevels);
-        hyteg::MeshInfo const meshInfo = hyteg::MeshInfo::meshAnnulusBase(coarseRadii, coarseThetas);
+        hyteg::MeshInfo const meshInfo
+                = hyteg::MeshInfo::meshAnnulusBase(coarseRadii, coarseThetas);
 
         hyteg::SetupPrimitiveStorage setupStorage(
                 meshInfo,
@@ -166,24 +166,15 @@ public:
             return hyteg::Point3D(double(Coord<X>(xy)), double(Coord<Y>(xy)), real_t(0));
         };
 
-        microMesh = std::make_shared<hyteg::micromesh::MicroMesh>(
-                storage,
-                minLevel,
-                maxLevel,
-                polynomial_degree,
-                2);
+        microMesh = std::make_shared<
+                hyteg::micromesh::MicroMesh>(storage, minLevel, maxLevel, polynomial_degree, 2);
         hyteg::buildPolarMicroMesh(*microMesh, rFine, thetaFine, numLevels, map);
         storage->setMicroMesh(microMesh);
         microMeshFunc = get_micromesh_func();
 
         alpha_fe = std::make_unique<FunctionType>("alpha", storage, minLevel, maxLevel, bc);
         beta_fe = std::make_unique<FunctionType>("beta", storage, minLevel, maxLevel, bc);
-        rhsNodal = std::make_unique<FunctionType>(
-                "rhsNodal",
-                storage,
-                minLevel,
-                maxLevel,
-                bc);
+        rhsNodal = std::make_unique<FunctionType>("rhsNodal", storage, minLevel, maxLevel, bc);
         u = std::make_unique<FunctionType>("u", storage, minLevel, maxLevel, bc);
         f = std::make_unique<FunctionType>("f", storage, minLevel, maxLevel, bc);
 
@@ -207,35 +198,16 @@ public:
 
         // injectDown = true: GMG applies A at every level from minLevel to maxLevel, so
         // alpha/beta must be populated on all of them
-        hyteg::readPolarTensorGrid(
-                *alpha_fe,
-                rFine,
-                thetaFine,
-                numLevels,
-                alphaTensorGrid,
-                true);
-        hyteg::readPolarTensorGrid(
-                *beta_fe,
-                rFine,
-                thetaFine,
-                numLevels,
-                betaTensorGrid,
-                true);
+        hyteg::readPolarTensorGrid(*alpha_fe, rFine, thetaFine, numLevels, alphaTensorGrid, true);
+        hyteg::readPolarTensorGrid(*beta_fe, rFine, thetaFine, numLevels, betaTensorGrid, true);
 
-        A = std::make_unique<OperatorType>(
-                storage,
-                minLevel,
-                maxLevel,
-                *alpha_fe,
-                *beta_fe,
-                *microMeshFunc);
+        A = std::make_unique<
+                OperatorType>(storage, minLevel, maxLevel, *alpha_fe, *beta_fe, *microMeshFunc);
         M = std::make_unique<MassType>(storage, minLevel, maxLevel, *microMeshFunc);
         A->computeInverseDiagonalOperatorValues();
 
-        auto smoother = std::make_shared<hyteg::ChebyshevSmoother<OperatorType>>(
-                storage,
-                minLevel,
-                maxLevel);
+        auto smoother = std::make_shared<
+                hyteg::ChebyshevSmoother<OperatorType>>(storage, minLevel, maxLevel);
         {
             // Spectral radii estimates for Chebyshev smoother
             std::vector<real_t> spectralRadii(maxLevel - minLevel + 1);
@@ -256,13 +228,8 @@ public:
 
         // Coarse grid tol, chosen to be 1e-2 * fine grid tol
         real_t const coarseTolerance = cg_tol * real_t(1e-2);
-        coarseGridSolver = std::make_shared<hyteg::CGSolver<OperatorType>>(
-                storage,
-                minLevel,
-                minLevel,
-                1000,
-                coarseTolerance,
-                real_t(0));
+        coarseGridSolver = std::make_shared<hyteg::CGSolver<
+                OperatorType>>(storage, minLevel, minLevel, 1000, coarseTolerance, real_t(0));
         coarseGridSolver->setPrintInfo(false);
 
         gmgPreconditioner = std::make_shared<hyteg::GeometricMultigridSolver<OperatorType>>(
@@ -291,24 +258,13 @@ public:
     {
         std::vector<real_t> const rhoTensorGrid = extract_tensor_grid(rho);
 
-        hyteg::readPolarTensorGrid(
-                *rhsNodal,
-                rFine,
-                thetaFine,
-                numLevels,
-                rhoTensorGrid,
-                false);
+        hyteg::readPolarTensorGrid(*rhsNodal, rFine, thetaFine, numLevels, rhoTensorGrid, false);
         M->apply(*rhsNodal, *f, maxLevel, hyteg::All);
 
         pcgSolver->solve(*A, *u, *f, maxLevel);
 
         std::vector<real_t> solutionTensorGrid;
-        hyteg::writePolarTensorGrid(
-                *u,
-                rFine,
-                thetaFine,
-                numLevels,
-                solutionTensorGrid);
+        hyteg::writePolarTensorGrid(*u, rFine, thetaFine, numLevels, solutionTensorGrid);
 
         write_tensor_grid_to_phi(solutionTensorGrid, phi);
     }
@@ -334,9 +290,11 @@ private:
         // std::vector<real_t>, not a Kokkos::View, so view_2d's memory can't be handed
         // through directly.
         std::vector<real_t> tensorGrid(view_2d.size());
-        std::transform(view_2d.data(), view_2d.data() + view_2d.size(), tensorGrid.begin(), [](double v) {
-            return real_t(v);
-        });
+        std::transform(
+                view_2d.data(),
+                view_2d.data() + view_2d.size(),
+                tensorGrid.begin(),
+                [](double v) { return real_t(v); });
         return tensorGrid;
     }
 
