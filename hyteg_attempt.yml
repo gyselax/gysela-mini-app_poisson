@@ -1,0 +1,11 @@
+SplineMesh:
+  r_ncells: 158
+  r_min: 0.0
+  r_max: 1.0
+  theta_ncells: 192
+  theta_min: 0.0
+  theta_max: 6.283185307179586
+Poisson:
+  algorithm: HyTeg
+  polynomial_degree: P2
+  num_levels: 5
