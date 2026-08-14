@@ -207,7 +207,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator)
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeRTheta idx_range)
 {
     std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
     if (algorithm == "PolarFEM") {
@@ -215,7 +216,6 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     } else if (algorithm == "GMGPolar") {
         return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "HyTeg") {
-        IdxRangeRTheta const idx_range = get_spline_idx_range(interpolator.get_builder());
         return initialise_hyteg_solver(conf_gyselalibxx, discrete_mapping, idx_range);
     } else {
         throw std::runtime_error("Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "

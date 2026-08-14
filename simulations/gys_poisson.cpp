@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     //                    Initialise Poisson
     // -------------------------------------------------------------
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> solver
-            = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+            = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator, idx_range);
 
     solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));
 
