@@ -26,7 +26,7 @@ set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
 add_subdirectory(gyselalibxx EXCLUDE_FROM_ALL)
 
 ## Link to HyTeG library
-add_subdirectory(hyteg EXCLUDE_FROM_ALL)
+add_subdirectory(hyteg EXCLUDE_FROM_ALL SYSTEM)
 
 ## Change the C++ flags to the Gysela-X++ specific ones
 set(CMAKE_CXX_FLAGS "${GYSELAX_DEFAULT_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
