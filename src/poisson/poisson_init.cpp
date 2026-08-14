@@ -123,7 +123,7 @@ initialise_hyteg_solver_impl(
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_hyteg_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineRThetaBuilder const& builder)
+        IdxRangeRTheta idx_range)
 {
     char* c_polynomial_degree = nullptr;
     PC_status_t status = PC_string(
@@ -133,8 +133,6 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     if (c_polynomial_degree != nullptr) {
         free(c_polynomial_degree);
     }
-
-    IdxRangeRTheta const idx_range = builder.interpolation_domain();
 
     using real_t = walberla::real_t;
     if (polynomial_degree == "P1") {
@@ -170,7 +168,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     } else if (algorithm == "GMGPolar") {
         throw std::runtime_error("GMGPolar is not yet available");
     } else if (algorithm == "HyTeg") {
-        return initialise_hyteg_solver(conf_gyselalibxx, discrete_mapping, builder);
+        IdxRangeRTheta const idx_range = get_spline_idx_range(interpolator.get_builder());
+        return initialise_hyteg_solver(conf_gyselalibxx, discrete_mapping, idx_range);
     } else {
         throw std::runtime_error("Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "
                                  "HyTeg]");
