@@ -9,6 +9,9 @@
 #include <paraconf.h>
 #include <pdi.h>
 
+#include "core/mpi/Environment.h"
+#include "core/mpi/MPIManager.h"
+
 #include "cartesian_solution.hpp"
 #include "circular_to_cartesian.hpp"
 #include "curvilinear_solution.hpp"
@@ -48,6 +51,12 @@ int main(int argc, char** argv)
 {
     ::Kokkos::ScopeGuard kokkos_scope(argc, argv);
     ::ddc::ScopeGuard ddc_scope(argc, argv);
+
+    // walberla::mpi::Environment with no arg parsing
+    int walberla_argc = 0;
+    char** walberla_argv = nullptr;
+    ::walberla::mpi::Environment walberla_env(walberla_argc, walberla_argv);
+    ::walberla::MPIManager::instance()->useWorldComm();
 
     // Parse command line arguments
     PC_tree_t conf_gyselalibxx;
@@ -137,7 +146,7 @@ int main(int argc, char** argv)
     //                    Initialise Poisson
     // -------------------------------------------------------------
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> solver
-            = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+            = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator, idx_range);
 
     solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));
 

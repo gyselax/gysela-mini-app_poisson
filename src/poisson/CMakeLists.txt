@@ -15,5 +15,8 @@ target_link_libraries(poisson_init
         gslx::paraconfpp
         gslx::pde_solvers
         gslx::utils
+        hyteg
+        opgen-div_alpha_grad_plus_beta_mass
+        opgen-mass
 )
 

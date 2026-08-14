@@ -1,8 +1,20 @@
 // SPDX-License-Identifier: MIT
+#include "hyteg/gridtransferoperators/P1toP1LinearProlongation.hpp"
+#include "hyteg/gridtransferoperators/P1toP1LinearRestriction.hpp"
+#include "hyteg/gridtransferoperators/P2toP2QuadraticProlongation.hpp"
+#include "hyteg/gridtransferoperators/P2toP2QuadraticRestriction.hpp"
+#include "hyteg/p1functionspace/P1Function.hpp"
+#include "hyteg/p2functionspace/P2Function.hpp"
+#include "hyteg_operators/operators/div_alpha_grad_plus_beta_mass/P1ElementwiseDivAlphaGradPlusBetaMassP1CoeffsParametricP1Map.hpp"
+#include "hyteg_operators/operators/div_alpha_grad_plus_beta_mass/P2ElementwiseDivAlphaGradPlusBetaMassP2CoeffsParametricP2Map.hpp"
+#include "hyteg_operators/operators/mass/P1ElementwiseMassParametricP1Map.hpp"
+#include "hyteg_operators/operators/mass/P2ElementwiseMassParametricP2Map.hpp"
+
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
 #include "gmg_polar_poisson_like_solver.hpp"
+#include "hyteg_poisson_like_solver.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
@@ -61,6 +73,93 @@ initialise_polar_fem_solver(
             input_preconditioner_max_block_size);
 }
 
+template <
+        class FunctionType,
+        class OperatorType,
+        class MassType,
+        class RestrictionType,
+        class ProlongationType,
+        class MicroMeshFuncType>
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
+initialise_hyteg_solver_impl(
+        PC_tree_t const& conf_gyselalibxx,
+        DiscreteMapping const& discrete_mapping,
+        IdxRangeRTheta idx_range)
+{
+    // Parse optional arguments
+    long int num_levels;
+    long int cg_max_iter;
+    double cg_tol;
+
+    PC_status_t num_levels_status
+            = PC_int(PC_get(conf_gyselalibxx, ".Poisson.num_levels"), &num_levels);
+    PC_status_t cg_max_iter_status
+            = PC_int(PC_get(conf_gyselalibxx, ".Poisson.cg_max_iter"), &cg_max_iter);
+    PC_status_t cg_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.cg_tol"), &cg_tol);
+
+    std::optional<int> input_num_levels(
+            num_levels_status == PC_OK ? std::optional<int>(num_levels) : std::nullopt);
+    std::optional<int> input_cg_max_iter(
+            cg_max_iter_status == PC_OK ? std::optional<int>(cg_max_iter) : std::nullopt);
+    std::optional<double> input_cg_tol(
+            cg_tol_status == PC_OK ? std::optional<double>(cg_tol) : std::nullopt);
+
+    return std::make_unique<HyTegPoissonLikeSolver<
+            DiscreteMapping,
+            GridR,
+            GridTheta,
+            FunctionType,
+            OperatorType,
+            MassType,
+            RestrictionType,
+            ProlongationType,
+            MicroMeshFuncType>>(
+            discrete_mapping,
+            idx_range,
+            input_num_levels,
+            input_cg_max_iter,
+            input_cg_tol);
+}
+
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_hyteg_solver(
+        PC_tree_t const& conf_gyselalibxx,
+        DiscreteMapping const& discrete_mapping,
+        IdxRangeRTheta idx_range)
+{
+    char* c_polynomial_degree = nullptr;
+    PC_status_t status = PC_string(
+            PC_get(conf_gyselalibxx, ".Poisson.polynomial_degree"),
+            &c_polynomial_degree);
+    std::string const polynomial_degree(status == PC_OK ? c_polynomial_degree : "P2");
+    if (c_polynomial_degree != nullptr) {
+        free(c_polynomial_degree);
+    }
+
+    using real_t = walberla::real_t;
+    if (polynomial_degree == "P1") {
+        return initialise_hyteg_solver_impl<
+                hyteg::P1Function<real_t>,
+                hyteg::operatorgeneration::
+                        P1ElementwiseDivAlphaGradPlusBetaMassP1CoeffsParametricP1Map,
+                hyteg::operatorgeneration::P1ElementwiseMassParametricP1Map,
+                hyteg::P1toP1LinearRestriction<real_t>,
+                hyteg::P1toP1LinearProlongation<real_t>,
+                hyteg::P1VectorFunction<real_t>>(conf_gyselalibxx, discrete_mapping, idx_range);
+    } else if (polynomial_degree == "P2") {
+        return initialise_hyteg_solver_impl<
+                hyteg::P2Function<real_t>,
+                hyteg::operatorgeneration::
+                        P2ElementwiseDivAlphaGradPlusBetaMassP2CoeffsParametricP2Map,
+                hyteg::operatorgeneration::P2ElementwiseMassParametricP2Map,
+                hyteg::P2toP2QuadraticRestriction,
+                hyteg::P2toP2QuadraticProlongation,
+                hyteg::P2VectorFunction<real_t>>(conf_gyselalibxx, discrete_mapping, idx_range);
+    } else {
+        throw std::runtime_error(
+                "Poisson.polynomial_degree not recognised. Should be one of [P1, P2]");
+    }
+}
+
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_gmgpolar_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
@@ -108,7 +207,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator)
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeRTheta idx_range)
 {
     std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
     if (algorithm == "PolarFEM") {
@@ -116,7 +216,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     } else if (algorithm == "GMGPolar") {
         return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "HyTeg") {
-        throw std::runtime_error("HyTeg is not yet available");
+        return initialise_hyteg_solver(conf_gyselalibxx, discrete_mapping, idx_range);
     } else {
         throw std::runtime_error("Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "
                                  "HyTeg]");
