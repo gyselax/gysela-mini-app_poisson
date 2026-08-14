@@ -2,6 +2,7 @@
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
+#include "gmg_polar_poisson_like_solver.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
@@ -60,6 +61,50 @@ initialise_polar_fem_solver(
             input_preconditioner_max_block_size);
 }
 
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_gmgpolar_solver(
+        PC_tree_t const& conf_gyselalibxx,
+        DiscreteMapping const& discrete_mapping,
+        SplineInterpolatorRThetaConst const& interpolator)
+{
+    // Parse optional arguments
+    int with_extrapolation;
+    long int max_iter;
+    double abs_tol;
+    double rel_tol;
+
+    PC_status_t with_extrapolation_status
+            = PC_bool(PC_get(conf_gyselalibxx, ".Poisson.with_extrapolation"), &with_extrapolation);
+    PC_status_t max_iter_status = PC_int(PC_get(conf_gyselalibxx, ".Poisson.max_iter"), &max_iter);
+    PC_status_t abs_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.abs_tol"), &abs_tol);
+    PC_status_t rel_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.rel_tol"), &rel_tol);
+
+    ExtrapolationType input_with_extrapolation;
+    if (with_extrapolation_status == PC_OK) {
+        input_with_extrapolation = with_extrapolation ? ExtrapolationType::IMPLICIT_EXTRAPOLATION
+                                                      : ExtrapolationType::NONE;
+    } else {
+        input_with_extrapolation = ExtrapolationType::NONE;
+    }
+    std::optional<int> input_max_iter(
+            max_iter_status == PC_OK ? std::optional<int>(max_iter) : std::nullopt);
+    std::optional<double> input_abs_tol(
+            abs_tol_status == PC_OK ? std::optional<double>(abs_tol) : std::nullopt);
+    std::optional<double> input_rel_tol(
+            rel_tol_status == PC_OK ? std::optional<double>(rel_tol) : std::nullopt);
+
+    return std::make_unique<GMGPolarPoissonLikeSolver<
+            DiscreteMapping,
+            GridR,
+            GridTheta,
+            SplineInterpolatorRThetaConst>>(
+            discrete_mapping,
+            interpolator,
+            input_with_extrapolation,
+            input_max_iter,
+            input_abs_tol,
+            input_rel_tol);
+}
+
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
@@ -69,7 +114,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     if (algorithm == "PolarFEM") {
         return initialise_polar_fem_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "GMGPolar") {
-        throw std::runtime_error("GMGPolar is not yet available");
+        return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "HyTeg") {
         throw std::runtime_error("HyTeg is not yet available");
     } else {
