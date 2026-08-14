@@ -80,9 +80,8 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
 
     ExtrapolationType input_with_extrapolation;
     if (with_extrapolation_status == PC_OK) {
-        input_with_extrapolation = with_extrapolation
-                                           ? ExtrapolationType::IMPLICIT_EXTRAPOLATION
-                                           : ExtrapolationType::NONE;
+        input_with_extrapolation = with_extrapolation ? ExtrapolationType::IMPLICIT_EXTRAPOLATION
+                                                      : ExtrapolationType::NONE;
     } else {
         input_with_extrapolation = ExtrapolationType::NONE;
     }
