@@ -10,7 +10,9 @@ foreach (MAPPING IN LISTS MAPPING_LIST)
         target_link_libraries(gys-poisson_${MAPPING}_${SOLUTION}
             PUBLIC
                 DDC::core
+                DDC::pdi
                 paraconf::paraconf
+                PDI::PDI_C
                 gslx::geometry_RTheta
                 gslx::paraconfpp
                 gslx::pde_solvers
