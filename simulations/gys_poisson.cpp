@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 
 #include <ddc/ddc.hpp>
 #include <ddc/pdi.hpp>
@@ -166,11 +167,11 @@ int main(int argc, char **argv) {
                               get_const_field(coeff_beta));
 
   end_time = std::chrono::system_clock::now();
-  std::cout << "Poisson initialisation time : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
-                                                                     start_time)
-                   .count()
-            << "ms" << std::endl;
+  int init_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      end_time - start_time)
+                      .count();
+  std::cout << "Poisson initialisation time : " << init_time << "ms"
+            << std::endl;
 
   // -------------------------------------------------------------
   //                 Initialise Poisson input
@@ -187,45 +188,52 @@ int main(int argc, char **argv) {
   DFieldMemRTheta rhs_alloc(idx_range);
   DFieldRTheta rhs = get_field(result_alloc);
 
-  DFieldMemR r_coords_alloc(idxrange_r);
-  DFieldMemTheta theta_coords_alloc(idxrange_theta);
-  DFieldR r_coords = get_field(r_coords_alloc);
-  DFieldTheta theta_coords = get_field(theta_coords_alloc);
-  host_t<DFieldMemR> x_coords_host(idxrange_r);
-  host_t<DFieldMemTheta> y_coords_host(idxrange_theta);
-  host_t<DFieldR> r_coords_host = get_field(x_coords_host);
-  host_t<DFieldTheta> theta_coords_host = get_field(y_coords_host);
+  DFieldMemRTheta x_coords_alloc(idx_range);
+  DFieldMemRTheta y_coords_alloc(idx_range);
+  DFieldRTheta x_coords = get_field(x_coords_alloc);
+  DFieldRTheta y_coords = get_field(y_coords_alloc);
+  host_t<DFieldMemRTheta> x_coords_alloc_host(idx_range);
+  host_t<DFieldMemRTheta> y_coords_alloc_host(idx_range);
+  host_t<DFieldRTheta> x_coords_host = get_field(x_coords_alloc_host);
+  host_t<DFieldRTheta> y_coords_host = get_field(y_coords_alloc_host);
 
+  host_t<DFieldMemR> r_coords_alloc_host(idxrange_r);
+  host_t<DFieldMemTheta> theta_coords_alloc_host(idxrange_theta);
+  ddc::host_for_each(idxrange_r, [&](IdxR const ir) {
+    r_coords_alloc_host(ir) = ddc::coordinate(ir);
+  });
+  ddc::host_for_each(idxrange_theta, [&](IdxTheta const itheta) {
+    theta_coords_alloc_host(itheta) = ddc::coordinate(itheta);
+  });
   ddc::parallel_for_each(
       Kokkos::DefaultExecutionSpace(), idx_range, KOKKOS_LAMBDA(IdxRTheta idx) {
         rhs(idx) = rhs_calculator(ddc::coordinate(idx));
       });
- 
+
   ddc::parallel_for_each(
-      Kokkos::DefaultExecutionSpace(), idxrange_r, KOKKOS_LAMBDA(IdxR ir) {
-        r_coords(ir) = ddc::coordinate(ddc::select<GridR>(ir));
+      Kokkos::DefaultExecutionSpace(), idx_range,
+      KOKKOS_LAMBDA(IdxRTheta irtheta) {
+        Coord<X, Y> xy_coords = mapping(ddc::coordinate(irtheta));
+        x_coords(irtheta) = ddc::get<X>(xy_coords);
+        y_coords(irtheta) = ddc::get<Y>(xy_coords);
       });
-  ddc::parallel_for_each(
-      Kokkos::DefaultExecutionSpace(), idxrange_theta,
-      KOKKOS_LAMBDA(IdxTheta i_theta) {
-        theta_coords(i_theta) =
-            ddc::coordinate(ddc::select<GridTheta>(i_theta));
-      });
-  ddc::parallel_deepcopy(r_coords_host, r_coords);
-  ddc::parallel_deepcopy(theta_coords_host, theta_coords);
-  ddc::expose_to_pdi("r_coords", r_coords_host);
-  ddc::expose_to_pdi("theta_coords", theta_coords_host);
+
+  ddc::parallel_deepcopy(x_coords_host, x_coords);
+  ddc::parallel_deepcopy(y_coords_host, y_coords);
+  ddc::expose_to_pdi("x_coords", x_coords_host);
+  ddc::expose_to_pdi("y_coords", y_coords_host);
+  ddc::expose_to_pdi("r_range", get_field(r_coords_alloc_host));
+  ddc::expose_to_pdi("theta_range", get_field(theta_coords_alloc_host));
   // -------------------------------------------------------------
   //                 Solve Poisson equation
   // -------------------------------------------------------------
   start_time = std::chrono::system_clock::now();
   (*solver)(result, get_const_field(rhs));
   end_time = std::chrono::system_clock::now();
-  std::cout << "Solver time : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
-                                                                     start_time)
-                   .count()
-            << "ms" << std::endl;
+  int solver_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        end_time - start_time)
+                        .count();
+  std::cout << "Solver time : " << solver_time << "ms" << std::endl;
 
   // -------------------------------------------------------------
   //                 Check error
@@ -240,6 +248,8 @@ int main(int argc, char **argv) {
   ddc::PdiEvent("last_iteration")
       .with("l_inf_error", max_err)
       .with("solver", algorithm.c_str())
+      .with("init_time", init_time)
+      .with("solver_time", solver_time)
       .with("electrical_potential", result_alloc_host);
 
   PC_tree_destroy(&conf_pdi);

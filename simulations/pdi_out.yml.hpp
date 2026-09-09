@@ -7,19 +7,32 @@ metadata:
   theta_size: int
   l_inf_error: double
   solver: char
+  init_time: int
+  solver_time: int
   
-
-  r_coords_extents: {type: array,  subtype: int64, size: 1 }
-  r_coords:
+  r_range_extents: {type: array,  subtype: int64, size: 1 }
+  r_range:
     type: array
     subtype: double
-    size: [  '$r_coords_extents[0]' ]
-
-  theta_coords_extents: {type: array,  subtype: int64, size: 1 }
-  theta_coords:
+    size: [   '$r_range_extents[0]']
+  
+  theta_range_extents: {type: array,  subtype: int64, size: 1 }
+  theta_range:
     type: array
     subtype: double
-    size: [  '$theta_coords_extents[0]' ]
+    size: [   '$theta_range_extents[0]']
+
+  x_coords_extents: {type: array,  subtype: int64, size: 2 }
+  x_coords:
+    type: array
+    subtype: double
+    size: [   '$x_coords_extents[0]', '$x_coords_extents[1]']
+
+  y_coords_extents: {type: array,  subtype: int64, size: 2 }
+  y_coords:
+    type: array
+    subtype: double
+    size: [  '$y_coords_extents[0]', '$y_coords_extents[1]']
 
 
 data:
@@ -30,7 +43,6 @@ data:
     size: [ '$electrical_potential_extents[0]', '$electrical_potential_extents[1]' ]
 
 
-
 plugins:
   set_value:
 
@@ -38,6 +50,6 @@ plugins:
     - file: 'output/poisson_${solver}_${r_size}_${theta_size}.h5'
       on_event: [last_iteration]
       collision_policy: replace_and_warn
-      write: [r_size, theta_size,solver,l_inf_error, r_coords, theta_coords,electrical_potential]
+      write: [r_size, theta_size,solver,init_time,solver_time,l_inf_error, r_range,theta_range, x_coords, y_coords,electrical_potential]
   #trace: ~
 )PDI_CFG";
