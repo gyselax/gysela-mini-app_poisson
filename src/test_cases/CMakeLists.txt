@@ -1,22 +1,17 @@
 # SPDX-License-Identifier: MIT
 
-add_library(test_cases STATIC
-    rhs_cartesian_solution_circular_mapping.cpp
-    rhs_curvilinear_solution_circular_mapping.cpp
-    rhs_cartesian_solution_czarny_mapping.cpp
-    rhs_curvilinear_solution_czarny_mapping.cpp
-)
+add_library(test_cases STATIC)
 
-target_include_directories(test_cases
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-target_link_libraries(test_cases
+target_sources(
+    test_cases
+    PRIVATE
+        rhs_cartesian_solution_circular_mapping.cpp
+        rhs_curvilinear_solution_circular_mapping.cpp
+        rhs_cartesian_solution_czarny_mapping.cpp
+        rhs_curvilinear_solution_czarny_mapping.cpp
     PUBLIC
-        DDC::core
-
-        gslx::geometry_RTheta
-        gslx::utils
+        FILE_SET HEADERS
+            FILES cartesian_solution.hpp curvilinear_solution.hpp i_solution.hpp rhs.hpp
 )
 
-
+target_link_libraries(test_cases PUBLIC DDC::core gyselalibxx::geometry_RTheta gyselalibxx::utils)

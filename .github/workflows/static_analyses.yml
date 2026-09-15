@@ -87,3 +87,15 @@ jobs:
       uses: crate-ci/typos@v1.46.0
       with:
         files: ./CMakeLists.txt ./README.md ./simulations ./src
+
+  CMake:
+    name: CMake format check using gersemi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions Repository
+        uses: actions/checkout@v6
+      - name: Install gersemi
+        run: pipx install gersemi~=0.28
+      - name: Run gersemi
+        run: |
+          gersemi --check $(git ls-files 'CMakeLists.txt' '*/CMakeLists.txt')
