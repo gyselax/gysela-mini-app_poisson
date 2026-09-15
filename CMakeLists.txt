@@ -1,20 +1,10 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.25)
-project(gysela-mini-app_poisson C CXX)
+project(gysela-mini-app_poisson CXX)
 
-###############################################################################################
-#                           List of options for Gyselalib++ library
-###############################################################################################
-set(GYSELALIBXX_BUILD_TESTING OFF)
-set(GYSELALIBXX_BUILD_SIMULATIONS OFF)
-set(GYSELALIBXX_BUILD_DOCUMENTATION OFF)
-set(GYSELALIBXX_INCLUDE_TESTING_DEPENDENCIES ON)
+option(GYSELA_MINI_APP_USE_EXTERNAL_GYSELALIBXX "Use an external Gyselalib++ installation" OFF)
 
-
-###############################################################################################
-#                                   List of options
-###############################################################################################
 
 ###############################################################################################
 #                              Build libraries and executables
@@ -23,10 +13,14 @@ set(GYSELALIBXX_INCLUDE_TESTING_DEPENDENCIES ON)
 set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
 
 ## Link to Gyselalibxx++ library
-add_subdirectory(gyselalibxx EXCLUDE_FROM_ALL)
-
-## Change the C++ flags to the Gysela-X++ specific ones
-set(CMAKE_CXX_FLAGS "${GYSELAX_DEFAULT_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
+if(GYSELA_MINI_APP_USE_EXTERNAL_GYSELALIBXX)
+  find_package(gyselalibxx REQUIRED)
+else()
+  set(GYSELALIBXX_BUILD_TESTING OFF)
+  set(GYSELALIBXX_BUILD_SIMULATIONS OFF)
+  set(GYSELALIBXX_BUILD_DOCUMENTATION OFF)
+  add_subdirectory(gyselalibxx)
+endif()
 
 ## Get the main code in `src/`
 add_subdirectory(src/)
