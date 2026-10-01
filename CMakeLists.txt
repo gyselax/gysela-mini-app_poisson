@@ -25,6 +25,11 @@ set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)
 ## Link to Gyselalibxx++ library
 add_subdirectory(gyselalibxx EXCLUDE_FROM_ALL)
 
+## Link to HyTeG library
+# HyTeG's convection particle libraries depend on each other, which gyselalibxx's build rejects.
+set(HYTEG_BUILD_CONVECTION_PARTICLES OFF CACHE BOOL "Build HyTeG's convection particle libraries")
+add_subdirectory(hyteg EXCLUDE_FROM_ALL)
+
 ## Change the C++ flags to the Gysela-X++ specific ones
 set(CMAKE_CXX_FLAGS "${GYSELAX_DEFAULT_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 

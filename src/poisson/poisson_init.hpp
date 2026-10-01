@@ -13,4 +13,5 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
         PC_tree_t const& conf_gyselalibxx,
         DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta> const&
                 discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator);
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeRTheta idx_range);

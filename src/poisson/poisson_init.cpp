@@ -3,6 +3,7 @@
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
 #include "gmg_polar_poisson_like_solver.hpp"
+#include "hyteg_poisson_like_solver.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
@@ -105,10 +106,42 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             input_rel_tol);
 }
 
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_hyteg_solver(
+        PC_tree_t const& conf_gyselalibxx,
+        DiscreteMapping const& discrete_mapping,
+        IdxRangeRTheta idx_range)
+{
+    // Parse optional arguments
+    long int num_levels;
+    long int cg_max_iter;
+    double cg_tol;
+
+    PC_status_t num_levels_status
+            = PC_int(PC_get(conf_gyselalibxx, ".Poisson.num_levels"), &num_levels);
+    PC_status_t cg_max_iter_status
+            = PC_int(PC_get(conf_gyselalibxx, ".Poisson.cg_max_iter"), &cg_max_iter);
+    PC_status_t cg_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.cg_tol"), &cg_tol);
+
+    std::optional<int> input_num_levels(
+            num_levels_status == PC_OK ? std::optional<int>(num_levels) : std::nullopt);
+    std::optional<int> input_cg_max_iter(
+            cg_max_iter_status == PC_OK ? std::optional<int>(cg_max_iter) : std::nullopt);
+    std::optional<double> input_cg_tol(
+            cg_tol_status == PC_OK ? std::optional<double>(cg_tol) : std::nullopt);
+
+    return std::make_unique<HyTegPoissonLikeSolver<DiscreteMapping, GridR, GridTheta>>(
+            discrete_mapping,
+            idx_range,
+            input_num_levels,
+            input_cg_max_iter,
+            input_cg_tol);
+}
+
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator)
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeRTheta idx_range)
 {
     std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
     if (algorithm == "PolarFEM") {
@@ -116,7 +149,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     } else if (algorithm == "GMGPolar") {
         return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     } else if (algorithm == "HyTeg") {
-        throw std::runtime_error("HyTeg is not yet available");
+        return initialise_hyteg_solver(conf_gyselalibxx, discrete_mapping, idx_range);
     } else {
         throw std::runtime_error("Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "
                                  "HyTeg]");
