@@ -3,12 +3,13 @@
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
 #include "gmg_polar_poisson_like_solver.hpp"
+#include "metric_tensor_evaluator.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
 
-using DiscreteMapping
-        = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
+using DiscreteMapping = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
+using MetricTensor = MetricTensorEvaluator<DiscreteMapping>;
 
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
 initialise_polar_fem_solver(
@@ -45,6 +46,9 @@ initialise_polar_fem_solver(
 
     // Initialise Polar splines
     ddc::init_discrete_space<PolarBSplinesRTheta>(discrete_mapping);
+    MetricTensor const metric_tensor(discrete_mapping);
+    IdxRangeRTheta const idx_range_full = interpolator.get_builder().interpolation_domain();
+
 
     // Create pointer
     return std::make_unique<PolarSplineFEMPoissonLikeSolver<
@@ -52,9 +56,12 @@ initialise_polar_fem_solver(
             GridTheta,
             PolarBSplinesRTheta,
             SplineInterpolatorRThetaConst,
-            DiscreteMapping>>(
+            DiscreteMapping,
+            MetricTensor>>(
             discrete_mapping,
+            metric_tensor,
             interpolator,
+            idx_range_full,
             input_max_iter,
             input_res_tol,
             input_batch_solver_logger,
@@ -78,12 +85,12 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     PC_status_t abs_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.abs_tol"), &abs_tol);
     PC_status_t rel_tol_status = PC_double(PC_get(conf_gyselalibxx, ".Poisson.rel_tol"), &rel_tol);
 
-    ExtrapolationType input_with_extrapolation;
+    gmgpolar::ExtrapolationType input_with_extrapolation;
     if (with_extrapolation_status == PC_OK) {
-        input_with_extrapolation = with_extrapolation ? ExtrapolationType::IMPLICIT_EXTRAPOLATION
-                                                      : ExtrapolationType::NONE;
+        input_with_extrapolation = with_extrapolation ? gmgpolar::ExtrapolationType::IMPLICIT_EXTRAPOLATION
+                                                      : gmgpolar::ExtrapolationType::NONE;
     } else {
-        input_with_extrapolation = ExtrapolationType::NONE;
+        input_with_extrapolation = gmgpolar::ExtrapolationType::NONE;
     }
     std::optional<int> input_max_iter(
             max_iter_status == PC_OK ? std::optional<int>(max_iter) : std::nullopt);
