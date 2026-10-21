@@ -11,11 +11,11 @@ foreach (MAPPING IN LISTS MAPPING_LIST)
             PUBLIC
                 DDC::core
                 paraconf::paraconf
-                gslx::geometry_RTheta
-                gslx::paraconfpp
-                gslx::pde_solvers
-                gslx::poisson_RTheta
-                gslx::utils
+                gyselalibxx::geometry_RTheta
+                gyselalibxx::paraconfpp
+                gyselalibxx::pde_solvers
+                gyselalibxx::poisson_RTheta
+                gyselalibxx::utils
                 poisson_init
                 test_cases
         )

@@ -15,8 +15,8 @@ target_link_libraries(test_cases
     PUBLIC
         DDC::core
 
-        gslx::geometry_RTheta
-        gslx::utils
+        gyselalibxx::geometry_RTheta
+        gyselalibxx::utils
 )
 
 
