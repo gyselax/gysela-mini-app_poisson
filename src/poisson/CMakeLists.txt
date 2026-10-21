@@ -11,9 +11,9 @@ target_link_libraries(poisson_init
         paraconf::paraconf
         DDC::core
         DDC::splines
-        gslx::geometry_RTheta
-        gslx::paraconfpp
-        gslx::pde_solvers
-        gslx::utils
+        gyselalibxx::geometry_RTheta
+        gyselalibxx::paraconfpp
+        gyselalibxx::pde_solvers
+        gyselalibxx::utils
 )
 
