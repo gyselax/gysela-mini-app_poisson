@@ -117,8 +117,7 @@ initialise_solver(PC_tree_t const &conf_gyselalibxx,
   } else if (algorithm == "HyTeg") {
     throw std::runtime_error("HyTeg is not yet available");
   } else {
-    throw std::runtime_error(
-        "Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "
-        "HyTeg]");
+    throw std::runtime_error("Algorithm not recognised. Should be one of "
+                             "[PolarFEM, GMGPolar, HyTeg]");
   }
 }
