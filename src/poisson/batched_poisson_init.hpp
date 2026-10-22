@@ -46,7 +46,7 @@ constexpr double res_tol = 1e-13;
 
 } // namespace
 
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> initialise_batched_solver(
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> initialise_batched_polar_fem_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta> const&
                 discrete_mapping,
