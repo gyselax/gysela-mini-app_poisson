@@ -3,12 +3,14 @@
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
 #include "gmg_polar_poisson_like_solver.hpp"
+#include "metric_tensor_evaluator.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
 
 using DiscreteMapping
         = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
+using MetricTensor = MetricTensorEvaluator<DiscreteMapping>;
 
 std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
 initialise_polar_fem_solver(
@@ -45,9 +47,8 @@ initialise_polar_fem_solver(
 
     // Initialise Polar splines
     ddc::init_discrete_space<PolarBSplinesRTheta>(discrete_mapping);
-    IdxRangeR const idx_range_r(SplineInterpPointsR::get_domain<GridR>());
-    IdxRangeTheta const idx_range_theta(SplineInterpPointsTheta::get_domain<GridTheta>());
-    IdxRangeRTheta const idx_range(idx_range_r, idx_range_theta);
+    MetricTensor const metric_tensor(discrete_mapping);
+    IdxRangeRTheta const idx_range_full = interpolator.get_builder().interpolation_domain();
 
     // Create pointer
     return std::make_unique<PolarSplineFEMPoissonLikeSolver<
@@ -55,10 +56,12 @@ initialise_polar_fem_solver(
             GridTheta,
             PolarBSplinesRTheta,
             SplineInterpolatorRThetaConst,
-            DiscreteMapping>>(
+            DiscreteMapping,
+            MetricTensor>>(
             discrete_mapping,
+            metric_tensor,
             interpolator,
-            idx_range,
+            idx_range_full,
             input_max_iter,
             input_res_tol,
             input_batch_solver_logger,
@@ -84,8 +87,9 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
 
     gmgpolar::ExtrapolationType input_with_extrapolation;
     if (with_extrapolation_status == PC_OK) {
-        input_with_extrapolation = with_extrapolation ? gmgpolar::ExtrapolationType::IMPLICIT_EXTRAPOLATION
-                                                      : gmgpolar::ExtrapolationType::NONE;
+        input_with_extrapolation = with_extrapolation
+                                           ? gmgpolar::ExtrapolationType::IMPLICIT_EXTRAPOLATION
+                                           : gmgpolar::ExtrapolationType::NONE;
     } else {
         input_with_extrapolation = gmgpolar::ExtrapolationType::NONE;
     }
@@ -122,7 +126,7 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
     } else if (algorithm == "HyTeg") {
         throw std::runtime_error("HyTeg is not yet available");
     } else {
-        throw std::runtime_error("Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "
-                                 "HyTeg]");
+        throw std::runtime_error("Algorithm not recognised. Should be one of "
+                                 "[PolarFEM, GMGPolar, HyTeg]");
     }
 }
