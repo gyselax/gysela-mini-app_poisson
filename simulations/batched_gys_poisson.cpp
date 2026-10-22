@@ -199,9 +199,9 @@ int main(int argc, char** argv)
     //                 Solve Poisson equation
     // -------------------------------------------------------------
     start_time = std::chrono::system_clock::now();
-    // if (algorithm == "PolarFem"){
-    (*fem_solver)(result_batched, get_const_field(rhs_batched));
-    //}
+    if (algorithm == "PolarFEM") {
+        (*fem_solver)(result_batched, get_const_field(rhs_batched));
+    }
     if (algorithm == "GMGPolar") {
         ddc::host_for_each(idx_range_batch, [&](IdxBatch idx) {
             (*gmg_solver)(result_batched[idx], get_const_field(rhs_batched)[idx]);
