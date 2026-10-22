@@ -44,175 +44,190 @@ using Solution = CartesianSolution<AnalyticalMapping>;
 
 static_assert(concepts::Solution<Solution>);
 
-int main(int argc, char **argv) {
-  ::Kokkos::ScopeGuard kokkos_scope(argc, argv);
-  ::ddc::ScopeGuard ddc_scope(argc, argv);
+int main(int argc, char** argv)
+{
+    ::Kokkos::ScopeGuard kokkos_scope(argc, argv);
+    ::ddc::ScopeGuard ddc_scope(argc, argv);
 
-  // Parse command line arguments
-  PC_tree_t conf_gyselalibxx;
-  if (argc == 2) {
-    conf_gyselalibxx = PC_parse_path(fs::path(argv[1]).c_str());
-  } else if (argc == 3) {
-    if (argv[1] == std::string_view("--dump-config")) {
-      std::fstream file(argv[2], std::fstream::out);
-      file << params_yaml;
-      return EXIT_SUCCESS;
+    // Parse command line arguments
+    PC_tree_t conf_gyselalibxx;
+    if (argc == 2) {
+        conf_gyselalibxx = PC_parse_path(fs::path(argv[1]).c_str());
+    } else if (argc == 3) {
+        if (argv[1] == std::string_view("--dump-config")) {
+            std::fstream file(argv[2], std::fstream::out);
+            file << params_yaml;
+            return EXIT_SUCCESS;
+        }
+    } else {
+        std::cerr << "usage: " << argv[0] << " [--dump-config] <config_file.yml>" << std::endl;
+        return EXIT_FAILURE;
     }
-  } else {
-    std::cerr << "usage: " << argv[0] << " [--dump-config] <config_file.yml>"
-              << std::endl;
-    return EXIT_FAILURE;
-  }
-  PC_errhandler(PC_NULL_HANDLER);
+    PC_errhandler(PC_NULL_HANDLER);
 
-  // -------------------------------------------------------------
-  //                        Setup
-  // -------------------------------------------------------------
-  std::chrono::time_point<std::chrono::system_clock> start_time =
-      std::chrono::system_clock::now();
-  std::chrono::time_point<std::chrono::system_clock> end_time;
+    // -------------------------------------------------------------
+    //                        Setup
+    // -------------------------------------------------------------
+    std::chrono::time_point<std::chrono::system_clock> start_time
+            = std::chrono::system_clock::now();
+    std::chrono::time_point<std::chrono::system_clock> end_time;
 
-  CoordR r_min(PCpp_double(conf_gyselalibxx, ".SplineMesh.r_min"));
-  CoordR r_max(PCpp_double(conf_gyselalibxx, ".SplineMesh.r_max"));
-  IdxStepR r_ncells(PCpp_int(conf_gyselalibxx, ".SplineMesh.r_ncells"));
+    CoordR r_min(PCpp_double(conf_gyselalibxx, ".SplineMesh.r_min"));
+    CoordR r_max(PCpp_double(conf_gyselalibxx, ".SplineMesh.r_max"));
+    IdxStepR r_ncells(PCpp_int(conf_gyselalibxx, ".SplineMesh.r_ncells"));
 
-  CoordTheta theta_min(PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_min"));
-  CoordTheta theta_max(PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_max"));
-  IdxStepTheta theta_ncells(
-      PCpp_int(conf_gyselalibxx, ".SplineMesh.theta_ncells"));
+    CoordTheta theta_min(PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_min"));
+    CoordTheta theta_max(PCpp_double(conf_gyselalibxx, ".SplineMesh.theta_max"));
+    IdxStepTheta theta_ncells(PCpp_int(conf_gyselalibxx, ".SplineMesh.theta_ncells"));
 
-  std::vector<CoordR> breakpoints_r =
-      build_uniform_break_points(r_min, r_max, r_ncells);
-  std::vector<CoordTheta> breakpoints_theta =
-      build_uniform_break_points(theta_min, theta_max, theta_ncells);
+    int const batch_size(PCpp_double(conf_gyselalibxx, ".SplineMesh.batch_size"));
+    std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
 
-  ddc::init_discrete_space<BSplinesR>(breakpoints_r);
-  ddc::init_discrete_space<GridR>(
-      SplineInterpPointsR::template get_sampling<GridR>());
+    std::vector<CoordR> breakpoints_r = build_uniform_break_points(r_min, r_max, r_ncells);
+    std::vector<CoordTheta> breakpoints_theta
+            = build_uniform_break_points(theta_min, theta_max, theta_ncells);
 
-  ddc::init_discrete_space<BSplinesTheta>(breakpoints_theta);
-  ddc::init_discrete_space<GridTheta>(
-      SplineInterpPointsTheta::template get_sampling<GridTheta>());
+    ddc::init_discrete_space<BSplinesR>(breakpoints_r);
+    ddc::init_discrete_space<GridR>(SplineInterpPointsR::template get_sampling<GridR>());
 
-  IdxRangeR idxrange_r = SplineInterpPointsR::template get_domain<GridR>();
-  IdxRangeTheta idxrange_theta =
-      SplineInterpPointsTheta::template get_domain<GridTheta>();
-  IdxRangeRTheta idx_range(idxrange_r, idxrange_theta);
+    ddc::init_discrete_space<BSplinesTheta>(breakpoints_theta);
+    ddc::init_discrete_space<GridTheta>(
+            SplineInterpPointsTheta::template get_sampling<GridTheta>());
 
-  IdxRangeBatch const idx_range_batch(IdxBatch(0, 0),
-                                      IdxStep<GridA, GridB>(2, 2));
-  IdxRangeBatched const idx_range_batched(idx_range_batch, idx_range);
+    IdxRangeR idxrange_r = SplineInterpPointsR::template get_domain<GridR>();
+    IdxRangeTheta idxrange_theta = SplineInterpPointsTheta::template get_domain<GridTheta>();
+    IdxRangeRTheta idx_range(idxrange_r, idxrange_theta);
 
-  // setup mapping
-  double major_radius = 6.1;
-  double vertical_offset = 0.3;
-  Coord<X, Y> origin_point(major_radius, vertical_offset);
+    IdxRangeBatch const idx_range_batch(IdxBatch(0, 0), IdxStep<GridA, GridB>(batch_size, 1));
+    IdxRangeBatched const idx_range_batched(idx_range_batch, idx_range);
+
+    // setup mapping
+    double major_radius = 6.1;
+    double vertical_offset = 0.3;
+    Coord<X, Y> origin_point(major_radius, vertical_offset);
 #if defined(CIRCULAR_MAPPING)
-  AnalyticalMapping const mapping(origin_point);
+    AnalyticalMapping const mapping(origin_point);
 #elif defined(CZARNY_MAPPING)
-  AnalyticalMapping const mapping(0.3, 1.4, origin_point);
+    AnalyticalMapping const mapping(0.3, 1.4, origin_point);
 #endif
 
-  SplineInterpolatorRThetaConst interpolator(idx_range);
+    SplineInterpolatorRThetaConst interpolator(idx_range);
 
-  DiscretePoloidalCSSplineMappingBuilder<X, Y,
-                                         SplineInterpolatorRThetaConst> const
-      discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping,
-                               interpolator);
-  DiscretePoloidalCSSplineMapping const discrete_mapping =
-      discrete_mapping_builder();
-  // Initialise the batched coefficients and RHS
-  DFieldMemBatched coeff_alpha_alloc_batched(idx_range_batched);
-  DFieldMemBatched coeff_beta_alloc_batched(idx_range_batched);
-  DFieldMemBatched coeff_rho_alloc_batched(idx_range_batched);
-  DFieldBatched coeff_alpha_batched = get_field(coeff_alpha_alloc_batched);
-  DFieldBatched coeff_beta_batched = get_field(coeff_beta_alloc_batched);
-  DFieldBatched coeff_rhs_batched = get_field(coeff_rho_alloc_batched);
+    DiscretePoloidalCSSplineMappingBuilder<X, Y, SplineInterpolatorRThetaConst> const
+            discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, interpolator);
+    DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
+    // Initialise the batched coefficients
+    DFieldMemBatched coeff_alpha_alloc_batched(idx_range_batched);
+    DFieldMemBatched coeff_beta_alloc_batched(idx_range_batched);
 
+    DFieldBatched coeff_alpha_batched = get_field(coeff_alpha_alloc_batched);
+    DFieldBatched coeff_beta_batched = get_field(coeff_beta_alloc_batched);
 
-  ddc::parallel_for_each(
-      Kokkos::DefaultExecutionSpace(), idx_range_batched,
-      KOKKOS_LAMBDA(IdxBatched const idx) {
-        double const r = ddc::coordinate(Idx<GridR>(idx));
-        double const theta = ddc::coordinate(Idx<GridTheta>(idx));
-        CoordRTheta rtheta_coord(r, theta);
-        
-        coeff_alpha_batched(idx) = Kokkos::exp(-Kokkos::tanh(
-            (ddc::coordinate(ddc::select<GridR>(idx)) - 0.7) / 0.05));
-        coeff_beta_batched(idx) = 1.0 / coeff_alpha_batched(idx);
+    ddc::parallel_for_each(
+            Kokkos::DefaultExecutionSpace(),
+            idx_range_batched,
+            KOKKOS_LAMBDA(IdxBatched const idx) {
+                double const r = ddc::coordinate(Idx<GridR>(idx));
+                double const theta = ddc::coordinate(Idx<GridTheta>(idx));
+                CoordRTheta rtheta_coord(r, theta);
 
-      });
+                coeff_alpha_batched(idx) = Kokkos::exp(
+                        -Kokkos::tanh((ddc::coordinate(ddc::select<GridR>(idx)) - 0.7) / 0.05));
+                coeff_beta_batched(idx) = 1.0 / coeff_alpha_batched(idx);
+            });
 
-  end_time = std::chrono::system_clock::now();
-  std::cout << "Setup time : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
-                                                                     start_time)
-                   .count()
-            << "ms" << std::endl;
-  start_time = std::chrono::system_clock::now();
+    end_time = std::chrono::system_clock::now();
+    std::cout << "Setup time : "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time)
+                         .count()
+              << "ms" << std::endl;
+    start_time = std::chrono::system_clock::now();
 
-  // -------------------------------------------------------------
-  //                    Initialise Poisson
-  // -------------------------------------------------------------
-  std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>>
-      solver = initialise_batched_solver(conf_gyselalibxx, discrete_mapping,
-                                         interpolator, idx_range_batched);
-  solver->update_coefficients(get_const_field(coeff_alpha_batched),
-                              get_const_field(coeff_beta_batched));
+    // -------------------------------------------------------------
+    //                    Initialise Poisson
+    // -------------------------------------------------------------
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> fem_solver
+            = initialise_batched_polar_fem_solver(
+                    conf_gyselalibxx,
+                    discrete_mapping,
+                    interpolator,
+                    idx_range_batched);
 
-  end_time = std::chrono::system_clock::now();
-  std::cout << "Poisson initialisation time : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
-                                                                     start_time)
-                   .count()
-            << "ms" << std::endl;
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> gmg_solver
+            = initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+    if (algorithm == "PolarFEM") {
+        fem_solver->update_coefficients(
+                get_const_field(coeff_alpha_batched),
+                get_const_field(coeff_beta_batched));
+    } else if (algorithm == "GMGPolar") {
+        ddc::host_for_each(idx_range_batch, [&](IdxBatch idx) {
+            gmg_solver->update_coefficients(
+                    get_const_field(coeff_alpha_batched)[idx],
+                    get_const_field(coeff_beta_batched)[idx]);
+        });
+    }
 
-  // -------------------------------------------------------------
-  //                 Initialise Poisson input
-  // -------------------------------------------------------------
-  Solution lhs(mapping, major_radius, vertical_offset);
+    end_time = std::chrono::system_clock::now();
+    std::cout << "Poisson initialisation time : "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time)
+                         .count()
+              << "ms" << std::endl;
 
-  ManufacturedRHS<Solution> rhs_calculator(mapping);
- // BatchedRHS batched_rhs;
+    // -------------------------------------------------------------
+    //                 Initialise Poisson input
+    // -------------------------------------------------------------
+    Solution lhs(mapping, major_radius, vertical_offset);
 
-  DFieldMemBatched result_alloc(idx_range_batched);
-  DFieldBatched result_batched = get_field(result_alloc);
+    ManufacturedRHS<Solution> rhs_calculator(mapping);
 
+    DFieldMemBatched result_alloc(idx_range_batched);
+    DFieldBatched result_batched = get_field(result_alloc);
+    DFieldMemBatched rhs_alloc(idx_range_batched);
+    DFieldBatched rhs_batched = get_field(rhs_alloc);
 
-  ddc::parallel_for_each(
-      Kokkos::DefaultExecutionSpace(), idx_range_batched,
-      KOKKOS_LAMBDA(IdxBatched idx_batch) {
-        double const r = ddc::coordinate(ddc::select<GridR>(idx_batch));
-        double const theta = ddc::coordinate(ddc::select<GridTheta>(idx_batch));
-        CoordRTheta rtheta_coord(r, theta);
-        rhs_batched(idx_batch) = rhs_calculator(rtheta_coord);
-      });
+    ddc::parallel_for_each(
+            Kokkos::DefaultExecutionSpace(),
+            idx_range_batched,
+            KOKKOS_LAMBDA(IdxBatched idx_batch) {
+                double const r = ddc::coordinate(ddc::select<GridR>(idx_batch));
+                double const theta = ddc::coordinate(ddc::select<GridTheta>(idx_batch));
+                CoordRTheta rtheta_coord(r, theta);
+                rhs_batched(idx_batch) = rhs_calculator(rtheta_coord);
+            });
 
-  // -------------------------------------------------------------
-  //                 Solve Poisson equation
-  // -------------------------------------------------------------
-  start_time = std::chrono::system_clock::now();
-  (*solver)(result_batched, get_const_field(coeff_rho_batched));
-  end_time = std::chrono::system_clock::now();
-  std::cout << "Solver time : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_time -
-                                                                     start_time)
-                   .count()
-            << "ms" << std::endl;
+    // -------------------------------------------------------------
+    //                 Solve Poisson equation
+    // -------------------------------------------------------------
+    start_time = std::chrono::system_clock::now();
+    // if (algorithm == "PolarFem"){
+    (*fem_solver)(result_batched, get_const_field(rhs_batched));
+    //}
+    if (algorithm == "GMGPolar") {
+        ddc::host_for_each(idx_range_batch, [&](IdxBatch idx) {
+            (*gmg_solver)(result_batched[idx], get_const_field(rhs_batched)[idx]);
+        });
+    }
 
-  // -------------------------------------------------------------
-  //                 Check error
-  // -------------------------------------------------------------
-  double max_err = error_norm_inf(
-      Kokkos::DefaultExecutionSpace(), get_const_field(result_batched),
-      KOKKOS_LAMBDA(IdxBatched idx_batch) {
-        double const r = ddc::coordinate(ddc::select<GridR>(idx_batch));
-        double const theta = ddc::coordinate(ddc::select<GridTheta>(idx_batch));
-        CoordRTheta rtheta_coord(r, theta);
-        return lhs(rtheta_coord);
-      });
-  std::cout << "Max error : " << max_err << std::endl;
+    end_time = std::chrono::system_clock::now();
+    std::cout << "Solver time : "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time)
+                         .count()
+              << "ms" << std::endl;
 
-  PC_tree_destroy(&conf_gyselalibxx);
-  return 0;
+    // -------------------------------------------------------------
+    //                 Check error
+    // -------------------------------------------------------------
+    double max_err = error_norm_inf(
+            Kokkos::DefaultExecutionSpace(),
+            get_const_field(result_batched),
+            KOKKOS_LAMBDA(IdxBatched idx_batch) {
+                double const r = ddc::coordinate(ddc::select<GridR>(idx_batch));
+                double const theta = ddc::coordinate(ddc::select<GridTheta>(idx_batch));
+                CoordRTheta rtheta_coord(r, theta);
+                return lhs(rtheta_coord);
+            });
+    std::cout << "Max error : " << max_err << std::endl;
+
+    PC_tree_destroy(&conf_gyselalibxx);
+    return 0;
 }
