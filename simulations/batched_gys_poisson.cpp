@@ -146,25 +146,23 @@ int main(int argc, char** argv)
     // -------------------------------------------------------------
     //                    Initialise Poisson
     // -------------------------------------------------------------
-    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> fem_solver
-            = initialise_batched_polar_fem_solver(
-                    conf_gyselalibxx,
-                    discrete_mapping,
-                    interpolator,
-                    idx_range_batched);
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> fem_solver;
+    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> gmg_solver;
 
-    std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> gmg_solver
-            = initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
     if (algorithm == "PolarFEM") {
+        fem_solver = initialise_batched_polar_fem_solver(
+                conf_gyselalibxx,
+                discrete_mapping,
+                interpolator,
+                idx_range_batched);
         fem_solver->update_coefficients(
                 get_const_field(coeff_alpha_batched),
                 get_const_field(coeff_beta_batched));
     } else if (algorithm == "GMGPolar") {
-        ddc::host_for_each(idx_range_batch, [&](IdxBatch idx) {
-            gmg_solver->update_coefficients(
-                    get_const_field(coeff_alpha_batched)[idx],
-                    get_const_field(coeff_beta_batched)[idx]);
-        });
+        gmg_solver = initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+        gmg_solver->update_coefficients(
+                get_const_field(coeff_alpha_batched)[IdxBatch(0, 0)],
+                get_const_field(coeff_beta_batched)[IdxBatch(0, 0)]);
     }
 
     end_time = std::chrono::system_clock::now();
