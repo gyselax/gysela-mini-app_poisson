@@ -7,9 +7,6 @@ foreach (MAPPING IN LISTS MAPPING_LIST)
         add_executable(gys-poisson_${MAPPING}_${SOLUTION}
             gys_poisson.cpp
         )
-        add_executable( batched-gys-poisson_${MAPPING}_${SOLUTION}
-            batched_gys_poisson.cpp
-        )
         target_link_libraries(gys-poisson_${MAPPING}_${SOLUTION}
             PUBLIC
                 DDC::core
@@ -22,21 +19,7 @@ foreach (MAPPING IN LISTS MAPPING_LIST)
                 poisson_init
                 test_cases
         )
-        target_link_libraries(batched-gys-poisson_${MAPPING}_${SOLUTION}
-            PUBLIC
-                DDC::core
-                paraconf::paraconf
-                gyselalibxx::geometry_RTheta
-                gyselalibxx::paraconfpp
-                gyselalibxx::pde_solvers
-                gyselalibxx::poisson_RTheta
-                gyselalibxx::utils
-                batched_poisson_init
-                test_cases
-        )
         target_compile_definitions(gys-poisson_${MAPPING}_${SOLUTION} PUBLIC -D${MAPPING}_MAPPING)
         target_compile_definitions(gys-poisson_${MAPPING}_${SOLUTION} PUBLIC -D${SOLUTION}_SOLUTION)
-        target_compile_definitions(batched-gys-poisson_${MAPPING}_${SOLUTION} PUBLIC -D${MAPPING}_MAPPING)
-        target_compile_definitions(batched-gys-poisson_${MAPPING}_${SOLUTION} PUBLIC -D${SOLUTION}_SOLUTION)
     endforeach()
 endforeach()
