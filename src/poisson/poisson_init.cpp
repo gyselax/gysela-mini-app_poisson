@@ -110,28 +110,3 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             input_abs_tol,
             input_rel_tol);
 }
-
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> initialise_batched_solver(
-        PC_tree_t const& conf_gyselalibxx,
-        DiscreteMapping const& discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator,
-        IdxRangeBatched const idx_range_batched)
-{
-    std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
-    if (algorithm == "PolarFEM") {
-        return initialise_batched_polar_fem_solver(
-                conf_gyselalibxx,
-                discrete_mapping,
-                interpolator,
-                idx_range_batched);
-    } // else if (algorithm == "GMGPolar") {
-    //  return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping,
-    //  interpolator);
-    //}
-    else if (algorithm == "HyTeg") {
-        throw std::runtime_error("HyTeg is not yet available");
-    } else {
-        throw std::runtime_error("Algorithm not recognised. Should be one of [PolarFEM, GMGPolar, "
-                                 "HyTeg]");
-    }
-}
