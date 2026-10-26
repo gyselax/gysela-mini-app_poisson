@@ -18,7 +18,7 @@ struct B
 {
 };
 
-struct GridA : UniformGridBase<A>
+struct GridPhi : UniformGridBase<A>
 {
 };
 
@@ -33,10 +33,10 @@ using DiscreteMappingBuilder
 using DiscreteMapping = typename DiscreteMappingBuilder::MappingType;
 using MetricTensor = MetricTensorEvaluator<DiscreteMapping>;
 
-using IdxRangeBatch = IdxRange<GridA, GridB>;
-using IdxBatch = Idx<GridA, GridB>;
-using IdxRangeBatched = IdxRange<GridA, GridB, GridR, GridTheta>;
-using IdxBatched = Idx<GridA, GridB, GridR, GridTheta>;
+using IdxRangeBatch = IdxRange<GridPhi>;
+using IdxBatch = Idx<GridPhi>;
+using IdxRangeBatched = IdxRange<GridPhi, GridR, GridTheta>;
+using IdxBatched = Idx<GridPhi, GridR, GridTheta>;
 
 using DFieldMemBatched = DFieldMem<IdxRangeBatched>;
 using DFieldBatched = DField<IdxRangeBatched>;

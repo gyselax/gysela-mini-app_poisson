@@ -98,7 +98,7 @@ int main(int argc, char** argv)
     IdxRangeTheta idxrange_theta = SplineInterpPointsTheta::template get_domain<GridTheta>();
     IdxRangeRTheta idx_range(idxrange_r, idxrange_theta);
 
-    IdxRangeBatch const idx_range_batch(IdxBatch(0, 0), IdxStep<GridA, GridB>(batch_size, 1));
+    IdxRangeBatch const idx_range_batch(Idx<GridPhi>(0), IdxStep<GridPhi>(batch_size));
     IdxRangeBatched const idx_range_batched(idx_range_batch, idx_range);
 
     // setup mapping
@@ -161,8 +161,8 @@ int main(int argc, char** argv)
     } else if (algorithm == "GMGPolar") {
         gmg_solver = initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
         gmg_solver->update_coefficients(
-                get_const_field(coeff_alpha_batched)[IdxBatch(0, 0)],
-                get_const_field(coeff_beta_batched)[IdxBatch(0, 0)]);
+                get_const_field(coeff_alpha_batched)[IdxBatch(0)],
+                get_const_field(coeff_beta_batched)[IdxBatch(0)]);
     } else if (algorithm == "HyTeg") {
         throw std::runtime_error("HyTeg is not yet available");
     } else {
