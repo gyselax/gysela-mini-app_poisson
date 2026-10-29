@@ -117,8 +117,8 @@ int main(int argc, char** argv)
             discrete_mapping_builder(Kokkos::DefaultExecutionSpace(), mapping, interpolator);
     DiscretePoloidalCSSplineMapping const discrete_mapping = discrete_mapping_builder();
     // Initialise the batched coefficients
-    DFieldMemBatched coeff_alpha_alloc_batched(idx_range_batched);
-    DFieldMemBatched coeff_beta_alloc_batched(idx_range_batched);
+    DFieldMemBatched coeff_alpha_batched_alloc(idx_range_batched);
+    DFieldMemBatched coeff_beta_batched_alloc(idx_range_batched);
 
     DFieldBatched coeff_alpha_batched = get_field(coeff_alpha_alloc_batched);
     DFieldBatched coeff_beta_batched = get_field(coeff_beta_alloc_batched);
