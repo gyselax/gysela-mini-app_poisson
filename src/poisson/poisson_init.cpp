@@ -2,21 +2,20 @@
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
+#include "geometry.hpp"
 #include "gmg_polar_poisson_like_solver.hpp"
-#include "metric_tensor_evaluator.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
 #include "polar_spline_fem_poisson_like_solver.hpp"
 
-using DiscreteMapping
-        = DiscretePoloidalCSSplineMapping<X, Y, SplineRThetaEvaluatorConstBound, R, Theta>;
-using MetricTensor = MetricTensorEvaluator<DiscreteMapping>;
 
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>>
-initialise_polar_fem_solver(
+
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>>
+initialise_batched_polar_fem_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator)
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeBatched const idx_range_batched)
 {
     // Parse optional arguments
     long int max_iter;
@@ -48,7 +47,7 @@ initialise_polar_fem_solver(
     // Initialise Polar splines
     ddc::init_discrete_space<PolarBSplinesRTheta>(discrete_mapping);
     MetricTensor const metric_tensor(discrete_mapping);
-    IdxRangeRTheta const idx_range_full = interpolator.get_builder().interpolation_domain();
+
 
     // Create pointer
     return std::make_unique<PolarSplineFEMPoissonLikeSolver<
@@ -57,11 +56,12 @@ initialise_polar_fem_solver(
             PolarBSplinesRTheta,
             SplineInterpolatorRThetaConst,
             DiscreteMapping,
-            MetricTensor>>(
+            MetricTensor,
+            IdxRangeBatched>>(
             discrete_mapping,
             metric_tensor,
             interpolator,
-            idx_range_full,
+            idx_range_batched,
             input_max_iter,
             input_res_tol,
             input_batch_solver_logger,
@@ -113,16 +113,21 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             input_rel_tol);
 }
 
-std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initialise_solver(
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> initialise_solver(
         PC_tree_t const& conf_gyselalibxx,
         DiscreteMapping const& discrete_mapping,
-        SplineInterpolatorRThetaConst const& interpolator)
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeBatched const idx_range_batched)
 {
     std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
     if (algorithm == "PolarFEM") {
-        return initialise_polar_fem_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+        return initialise_batched_polar_fem_solver(
+                conf_gyselalibxx,
+                discrete_mapping,
+                interpolator,
+                idx_range_batched);
     } else if (algorithm == "GMGPolar") {
-        return initialise_gmgpolar_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+        throw std::runtime_error("GMGPolar does not yet support batching.");
     } else if (algorithm == "HyTeg") {
         throw std::runtime_error("HyTeg is not yet available");
     } else {
