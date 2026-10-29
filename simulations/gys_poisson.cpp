@@ -120,8 +120,8 @@ int main(int argc, char** argv)
     DFieldMemBatched coeff_alpha_batched_alloc(idx_range_batched);
     DFieldMemBatched coeff_beta_batched_alloc(idx_range_batched);
 
-    DFieldBatched coeff_alpha_batched = get_field(coeff_alpha_alloc_batched);
-    DFieldBatched coeff_beta_batched = get_field(coeff_beta_alloc_batched);
+    DFieldBatched coeff_alpha_batched = get_field(coeff_alpha_batched_alloc);
+    DFieldBatched coeff_beta_batched = get_field(coeff_beta_batched_alloc);
 
     ddc::parallel_for_each(
             Kokkos::DefaultExecutionSpace(),
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
             = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator);
 
     solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));*/
-    
+
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> fem_solver;
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> gmg_solver;
 
@@ -193,9 +193,8 @@ int main(int argc, char** argv)
             Kokkos::DefaultExecutionSpace(),
             idx_range_batched,
             KOKKOS_LAMBDA(IdxBatched idx_batch) {
-                double const r = ddc::coordinate(ddc::select<GridR>(idx_batch));
-                double const theta = ddc::coordinate(ddc::select<GridTheta>(idx_batch));
-                CoordRTheta rtheta_coord(r, theta);
+                IdxRTheta irtheta(idx_batch);
+                CoordRTheta rtheta_coord = ddc::coordinate(irtheta);
                 rhs_batched(idx_batch) = rhs_calculator(rtheta_coord);
             });
 
