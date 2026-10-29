@@ -2,6 +2,7 @@
 #include "circular_to_cartesian.hpp"
 #include "czarny_to_cartesian.hpp"
 #include "discrete_poloidal_cs_spline_mapping.hpp"
+#include "geometry.hpp"
 #include "gmg_polar_poisson_like_solver.hpp"
 #include "paraconfpp.hpp"
 #include "poisson_init.hpp"
@@ -36,7 +37,8 @@ initialise_batched_polar_fem_solver(
     std::optional<double> input_res_tol(
             res_tol_status == PC_OK ? std::optional<double>(res_tol) : std::nullopt);
     std::optional<bool> input_batch_solver_logger(
-            batch_solver_logger_status == PC_OK ? std::optional<bool>(true) : std::nullopt);
+            batch_solver_logger_status == PC_OK ? std::optional<bool>(batch_solver_logger)
+                                                : std::nullopt);
     std::optional<int> input_preconditioner_max_block_size(
             preconditioner_max_block_size_status == PC_OK
                     ? std::optional<int>(preconditioner_max_block_size)
@@ -109,4 +111,27 @@ std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> initial
             input_max_iter,
             input_abs_tol,
             input_rel_tol);
+}
+
+std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> initialise_solver(
+        PC_tree_t const& conf_gyselalibxx,
+        DiscreteMapping const& discrete_mapping,
+        SplineInterpolatorRThetaConst const& interpolator,
+        IdxRangeBatched const idx_range_batched)
+{
+    std::string algorithm(PCpp_string(conf_gyselalibxx, ".Poisson.algorithm"));
+    if (algorithm == "PolarFEM") {
+        return initialise_batched_polar_fem_solver(
+                conf_gyselalibxx,
+                discrete_mapping,
+                interpolator,
+                idx_range_batched);
+    } else if (algorithm == "GMGPolar") {
+        throw std::runtime_error("GMGPolar does not yet support batching.");
+    } else if (algorithm == "HyTeg") {
+        throw std::runtime_error("HyTeg is not yet available");
+    } else {
+        throw std::runtime_error("Algorithm not recognised. Should be one of "
+                                 "[PolarFEM, GMGPolar, HyTeg]");
+    }
 }
