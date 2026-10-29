@@ -127,10 +127,6 @@ int main(int argc, char** argv)
             Kokkos::DefaultExecutionSpace(),
             idx_range_batched,
             KOKKOS_LAMBDA(IdxBatched const idx) {
-                double const r = ddc::coordinate(Idx<GridR>(idx));
-                double const theta = ddc::coordinate(Idx<GridTheta>(idx));
-                CoordRTheta rtheta_coord(r, theta);
-
                 coeff_alpha_batched(idx) = Kokkos::exp(
                         -Kokkos::tanh((ddc::coordinate(ddc::select<GridR>(idx)) - 0.7) / 0.05));
                 coeff_beta_batched(idx) = 1.0 / coeff_alpha_batched(idx);
@@ -146,6 +142,11 @@ int main(int argc, char** argv)
     // -------------------------------------------------------------
     //                    Initialise Poisson
     // -------------------------------------------------------------
+    /*std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> solver
+            = initialise_solver(conf_gyselalibxx, discrete_mapping, interpolator);
+
+    solver->update_coefficients(get_const_field(coeff_alpha), get_const_field(coeff_beta));*/
+    
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeBatched>> fem_solver;
     std::unique_ptr<IPolarPoissonLikeSolver<IdxRangeRTheta, IdxRangeRTheta>> gmg_solver;
 
@@ -223,9 +224,8 @@ int main(int argc, char** argv)
             Kokkos::DefaultExecutionSpace(),
             get_const_field(result_batched),
             KOKKOS_LAMBDA(IdxBatched idx_batch) {
-                double const r = ddc::coordinate(ddc::select<GridR>(idx_batch));
-                double const theta = ddc::coordinate(ddc::select<GridTheta>(idx_batch));
-                CoordRTheta rtheta_coord(r, theta);
+                IdxRTheta irtheta(idx_batch);
+                CoordRTheta rtheta_coord = ddc::coordinate(irtheta);
                 return lhs(rtheta_coord);
             });
     std::cout << "Max error : " << max_err << std::endl;
