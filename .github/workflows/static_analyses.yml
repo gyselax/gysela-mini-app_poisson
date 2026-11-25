@@ -24,7 +24,7 @@ jobs:
       - run: |
           cp gyselalibxx/src/.clang-format .
           find src simulations -name '*.h' -o -name '*.hpp' -o -name '*.cpp' | \
-          xargs clang-format-14 -n -Werror
+          xargs clang-format -n -Werror
         shell: bash
 
   Markdown:
