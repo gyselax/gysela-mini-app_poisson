@@ -45,13 +45,13 @@ jobs:
           submodules: recursive
       - name: Build code
         run: |
+          . /ci/spack/share/spack/setup-env.sh && spack env activate gyselalibxx-openmp
           cmake -DCMAKE_TOOLCHAIN_FILE=gyselalibxx/toolchains/common_toolchains/release_toolchain.cmake -B build -S .
           cmake --build build --parallel 4
         shell: bash
-        env:
-          CMAKE_PREFIX_PATH: "/opt/googletest:/opt/openmp"
       - name: "Run tests"
         run: |
+          . /ci/spack/share/spack/setup-env.sh && spack env activate gyselalibxx-openmp
           ctest -j 2 --timeout 5 --output-junit tests.xml --output-on-failure
         shell: bash
         working-directory: ./build
