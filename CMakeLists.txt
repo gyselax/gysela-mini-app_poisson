@@ -11,6 +11,20 @@ set(GYSELALIBXX_BUILD_SIMULATIONS OFF)
 set(GYSELALIBXX_BUILD_DOCUMENTATION OFF)
 set(GYSELALIBXX_INCLUDE_TESTING_DEPENDENCIES ON)
 
+###############################################################################################
+#                              List of options for HyTeG library
+###############################################################################################
+set(HYTEG_BUILD_CONVECTION_PARTICLES OFF)
+set(HYTEG_BUILD_WITH_OPENMP OFF)
+set(HYTEG_BUILD_WITH_PETSC OFF)
+set(HYTEG_BUILD_WITH_MPFR OFF)
+set(HYTEG_BUILD_WITH_TRILINOS OFF)
+set(HYTEG_BUILD_WITH_ADIOS2 OFF)
+set(HYTEG_BUILD_WITH_PYTHON3 OFF)
+set(HYTEG_TERRANEO_MODULE OFF)
+set(HYTEG_MANTLECONVECTION_APP OFF)
+set(HYTEG_DOWNLOAD_BOOST OFF)
+
 
 ###############################################################################################
 #                                   List of options

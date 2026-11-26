@@ -3,4 +3,4 @@
 	url = https://github.com/gyselax/gyselalibxx.git
 [submodule "hyteg"]
 	path = hyteg
-	url = https://i10git.cs.fau.de/hyteg/hyteg.git
+	url = https://gitos.rrze.fau.de/cs10/hyteg/hyteg.git
